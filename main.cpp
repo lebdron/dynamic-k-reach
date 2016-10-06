@@ -10,11 +10,11 @@ int main() {
     dynamic_k_reach dkr;
     dkr.construct_index(filename, 3);
 
-    dkr.insert_vertex(11);
-    dkr.insert_edge(11, 5);
+    cout << dkr.query_reachability(2, 9) << endl;
 
-    bool r = dkr.query_reachability(11, 7);
-    cout << r << endl;
+    dkr.insert_edge(4, 7);
+
+    cout << dkr.query_reachability(2, 9) << endl;
 
     return 0;
 }

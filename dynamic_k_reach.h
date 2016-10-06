@@ -2,6 +2,7 @@
 
 #include <map>
 #include <set>
+#include <unordered_set>
 
 typedef uint32_t vertex_t;
 
@@ -11,7 +12,7 @@ class dynamic_k_reach {
     typedef std::map<vertex_t, graph_adj_t> graph_t;
     typedef std::map<vertex_t, weight_t> index_adj_t;
     typedef std::map<vertex_t, index_adj_t> index_t;
-    typedef std::set<vertex_t> cover_t;
+    typedef std::unordered_set<vertex_t> cover_t;
 
     weight_t k;
     graph_t out_neighbors, in_neighbors;
