@@ -3,15 +3,18 @@
 #include <map>
 #include <set>
 #include <unordered_set>
+#include <unordered_map>
 #include <limits>
+#include <vector>
 
 typedef uint32_t vertex_t;
+typedef std::pair<vertex_t, vertex_t> edge_t;
 typedef uint8_t weight_t;
 
 class dynamic_k_reach {
-    typedef std::pair<vertex_t, weight_t> edge_t;
+    typedef std::pair<vertex_t, weight_t> index_entry_t;
     typedef std::set<vertex_t> graph_adj_t;
-    typedef std::map<vertex_t, graph_adj_t> graph_t;
+    typedef std::vector<graph_adj_t> graph_t;
     typedef std::map<vertex_t, weight_t> index_adj_t;
     typedef std::map<vertex_t, index_adj_t> index_t;
     typedef std::unordered_set<vertex_t> cover_t;
@@ -23,13 +26,17 @@ class dynamic_k_reach {
     index_t out_index, in_index;
     cover_t cover;
 
+    std::unordered_map<vertex_t, vertex_t> mapping;
+
+    bool map_vertex(vertex_t &v) const;
+
     void generate_cover();
 
     void bfs_index(vertex_t s);
 
-    vertex_t vertex(const edge_t &e) const;
+    vertex_t vertex(const index_entry_t &e) const;
 
-    weight_t weight(const edge_t &e) const;
+    weight_t weight(const index_entry_t &e) const;
 
     void index_insert(const vertex_t s, const vertex_t t, const weight_t weight);
 
@@ -59,7 +66,8 @@ class dynamic_k_reach {
                         const weight_t difference) const;
 
 public:
-    void construct_index(std::string filename, weight_t k);
+
+    void construct_index(const std::vector<edge_t> &edges, weight_t k);
 
     void insert_edge(vertex_t s, vertex_t t);
 
