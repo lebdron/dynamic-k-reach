@@ -16,19 +16,20 @@ class dynamic_k_reach {
     typedef std::set<vertex_t> graph_adj_t;
     typedef std::vector<graph_adj_t> graph_t;
     typedef std::map<vertex_t, weight_t> index_adj_t;
-    typedef std::map<vertex_t, index_adj_t> index_t;
-    typedef std::unordered_set<vertex_t> cover_t;
+    typedef std::vector<index_adj_t> index_t;
 
     const weight_t MAX_WEIGHT = std::numeric_limits<weight_t>::max();
 
     weight_t k;
     graph_t out_neighbors, in_neighbors;
     index_t out_index, in_index;
-    cover_t cover;
+    std::vector<uint8_t> cover_mask;
 
-    std::unordered_map<vertex_t, vertex_t> mapping;
+    std::unordered_map<vertex_t, vertex_t> input_mapping, cover_mapping;
 
-    bool map_vertex(vertex_t &v) const;
+    bool map_input_vertex(vertex_t &v) const;
+
+    bool map_cover_vertex(vertex_t &v) const;
 
     void generate_cover();
 
@@ -38,15 +39,15 @@ class dynamic_k_reach {
 
     weight_t weight(const index_entry_t &e) const;
 
-    void index_insert(const vertex_t s, const vertex_t t, const weight_t weight);
+    void index_insert(vertex_t s, vertex_t t, const weight_t weight);
 
-    void index_insert_update(const vertex_t s, const vertex_t t,
+    void index_insert_update(vertex_t s, vertex_t t,
                              const weight_t weight_n);
 
-    void index_remove(const vertex_t s, const vertex_t t);
+    void index_remove(vertex_t s, vertex_t t);
 
     void
-    insert_edge_update(const vertex_t s, const vertex_t t,
+    insert_edge_update(vertex_t s, vertex_t t,
                        const weight_t difference);
 
     void neighbors_insert(const vertex_t s, const vertex_t t);
@@ -64,6 +65,10 @@ class dynamic_k_reach {
     bool check_pair(const vertex_t p, const vertex_t q,
                         const vertex_t s, const vertex_t t,
                         const weight_t difference) const;
+
+    index_adj_t& get_out_index(vertex_t v);
+
+    index_adj_t& get_in_index(vertex_t v);
 
 public:
 

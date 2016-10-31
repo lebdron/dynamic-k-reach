@@ -5,15 +5,58 @@
 
 using namespace std;
 
-inline bool dynamic_k_reach::map_vertex(vertex_t &v) const
+void dynamic_k_reach::construct_index(const vector<edge_t> &edges, weight_t k)
 {
-    if (mapping.count(v)){
-        v = mapping.at(v);
-        return true;
-    }
-    return false;
-}
+    this->k = k;
+    vertex_t id = 0;
+    {
+        unordered_map<vertex_t, uint32_t> degree;
+        for (const auto &e: edges) {
+            degree[e.first]++;
+            degree[e.second]++;
+        }
 
+        set<pair<uint32_t, vertex_t>, greater<pair<uint32_t, vertex_t>>> ordering;
+        for (const auto &v: degree) {
+            ordering.insert(make_pair(v.second, v.first));
+        }
+        for (const auto &v: ordering) {
+            input_mapping[v.second] = id++;
+        }
+    }
+
+    out_neighbors.resize(id);
+    in_neighbors.resize(id);
+    for (const auto &e: edges){
+        neighbors_insert(input_mapping[e.first], input_mapping[e.second]);
+    }
+
+    cover_mask.resize(id);
+    generate_cover();
+
+    {
+        set<pair<double_t, vertex_t>> ordering;
+        id = 0;
+        for (size_t v = 0; v < cover_mask.size(); ++v){
+            if (v) {
+                ordering.insert(make_pair((double) out_neighbors.at(v).size() /
+                                          in_neighbors.at(v).size(), v));
+                cover_mapping[v] = id++;
+            }
+        }
+        out_index.resize(id);
+        in_index.resize(id);
+        vector<vertex_t> order;
+        order.reserve(ordering.size());
+        for (const auto &p: ordering){
+            order.push_back(p.second);
+        }
+
+        for (const auto &i: order){
+            bfs_index(i);
+        }
+    }
+}
 
 inline vertex_t dynamic_k_reach::vertex(const index_entry_t &e) const
 {
@@ -23,29 +66,6 @@ inline vertex_t dynamic_k_reach::vertex(const index_entry_t &e) const
 inline weight_t dynamic_k_reach::weight(const index_entry_t &e) const
 {
     return e.second;
-}
-
-inline void dynamic_k_reach::index_insert(const vertex_t s, const vertex_t t,
-                                   const weight_t weight)
-{
-    if (weight <= k) {
-        out_index[s][t] = in_index[t][s] = weight;
-    }
-}
-
-inline void dynamic_k_reach::index_insert_update(const vertex_t s, const vertex_t t,
-                                          const weight_t weight_n)
-{
-    auto it = out_index[s].find(t);
-    if (it == out_index[s].end() || it != out_index[s].end() && weight_n < weight(*it)){
-        index_insert(s, t, weight_n);
-    }
-}
-
-inline void dynamic_k_reach::index_remove(const vertex_t s, const vertex_t t)
-{
-    out_index[s].erase(t);
-    in_index[t].erase(s);
 }
 
 inline void dynamic_k_reach::neighbors_insert(const vertex_t s, const vertex_t t)
@@ -64,10 +84,10 @@ void dynamic_k_reach::generate_cover()
 {
     vertex_t s = 0;
     for (const auto &neighbors: out_neighbors){
-        if (!cover.count(s)){
+        if (!cover_mask[s]){
             for (const auto &t: neighbors){
-                if (!cover.count(t)){
-                    cover.insert({s, t});
+                if (!cover_mask[t]){
+                    cover_mask[s] = cover_mask[t] = 1;
                     break;
                 }
             }
@@ -76,60 +96,88 @@ void dynamic_k_reach::generate_cover()
     }
 }
 
-void dynamic_k_reach::construct_index(const vector<edge_t> &edges, weight_t k)
+/*
+ * Internal index modifications
+ */
+
+inline bool dynamic_k_reach::map_cover_vertex(vertex_t &v) const
 {
-    this->k = k;
-    vertex_t id = 0;
-    {
-        unordered_map<vertex_t, uint32_t> degree;
-        for (const auto &e: edges) {
-            degree[e.first]++;
-            degree[e.second]++;
-        }
-
-        set<pair<uint32_t, vertex_t>, greater<pair<uint32_t, vertex_t>>> ordering;
-        for (const auto &v: degree) {
-            ordering.insert(make_pair(v.second, v.first));
-        }
-        for (const auto &v: ordering) {
-            mapping[v.second] = id++;
-        }
+    if (cover_mask[v]){
+        v = cover_mapping.at(v);
+        return true;
     }
+    return false;
+}
 
-    out_neighbors.resize(id);
-    in_neighbors.resize(id);
-    for (const auto &e: edges){
-        neighbors_insert(mapping[e.first], mapping[e.second]);
+
+dynamic_k_reach::index_adj_t &dynamic_k_reach::get_out_index(vertex_t v)
+{
+    map_cover_vertex(v);
+    return out_index.at(v);
+}
+
+dynamic_k_reach::index_adj_t &dynamic_k_reach::get_in_index(vertex_t v)
+{
+    map_cover_vertex(v);
+    return in_index.at(v);
+}
+
+inline void dynamic_k_reach::index_insert(vertex_t s, vertex_t t,
+                                          const weight_t weight)
+{
+    if (!map_cover_vertex(s) || !map_cover_vertex(t)){
+        return;
     }
+    if (weight <= k) {
+        out_index[s][t] = in_index[t][s] = weight;
+    }
+}
 
-    generate_cover();
-
-    {
-        set<pair<double_t, vertex_t>> ordering;
-        for (const auto &v: cover){
-            ordering.insert(make_pair((double)out_neighbors.at(v).size() / in_neighbors.at(v).size(), v));
-        }
-        vector<vertex_t> order;
-        order.reserve(cover.size());
-        for (const auto &p: ordering){
-            order.push_back(p.second);
-        }
-
-        for (const auto &i: order){
-            bfs_index(i);
+inline void dynamic_k_reach::index_insert_update(vertex_t s, vertex_t t,
+                                                 const weight_t weight_n)
+{
+    if (!map_cover_vertex(s) || !map_cover_vertex(t)){
+        return;
+    }
+    auto it = out_index[s].find(t);
+    if (it == out_index[s].end() || it != out_index[s].end() && weight_n < weight(*it)){
+        if (weight_n <= k) {
+            out_index[s][t] = in_index[t][s] = weight_n;
         }
     }
 }
 
-void dynamic_k_reach::insert_edge_update(const vertex_t s, const vertex_t t,
+inline void dynamic_k_reach::index_remove(vertex_t s, vertex_t t)
+{
+    if (!map_cover_vertex(s) || !map_cover_vertex(t)){
+        return;
+    }
+    out_index[s].erase(t);
+    in_index[t].erase(s);
+}
+
+/*
+ * External index modifications
+ */
+
+void dynamic_k_reach::insert_edge_update(vertex_t s, vertex_t t,
                                          const weight_t difference)
 {
-    for (const auto &i: in_index[s]) {
-        for (const auto &j: out_index[t]) {
+    for (const auto &i: get_in_index(s)) {
+        for (const auto &j: get_out_index(t)) {
             index_insert_update(vertex(i), vertex(j),
-                         weight(i) + weight(j) + difference);
+                                weight(i) + weight(j) + difference);
         }
     }
+}
+
+inline bool dynamic_k_reach::map_input_vertex(vertex_t &v) const
+{
+    if (input_mapping.count(v)){
+        v = input_mapping.at(v);
+        return true;
+    }
+    return false;
 }
 
 void dynamic_k_reach::insert_edge(vertex_t s, vertex_t t)
@@ -138,18 +186,18 @@ void dynamic_k_reach::insert_edge(vertex_t s, vertex_t t)
         return;
     }
     neighbors_insert(s, t);
-    if (!cover.count(s) && !cover.count(t)) { // Add vertex with higher degree
+    if (!cover_mask[s] && !cover_mask[t]) { // Add vertex with higher degree
         if (!in_neighbors[s].size() || !out_neighbors[s].size()) {
-            cover.insert(t);
+            cover_mask[t] = 1;
         }
         else {
-            cover.insert(s);
+            cover_mask[s] = 1;
         }
     }
-    if (cover.count(s) && cover.count(t)) {
+    if (cover_mask[s] && cover_mask[t]) {
         insert_edge_update(s, t, 1);
     }
-    else if (cover.count(s)) {
+    else if (cover_mask[s]) {
         for (const auto &i: out_neighbors[t]) {
             insert_edge_update(s, i, 2);
         }
@@ -227,7 +275,7 @@ void dynamic_k_reach::remove_edge(vertex_t s, vertex_t t)
     weight_t updated_distance;
     set<pair<vertex_t, vertex_t>> affected;
 
-    if (cover.count(s) && cover.count(t)){
+    if (cover_mask[s] && cover_mask[t]){
         // Identify affected
         index_remove(s, t);
         for (const auto &p: in_index.at(s)){
@@ -247,7 +295,7 @@ void dynamic_k_reach::remove_edge(vertex_t s, vertex_t t)
             index_insert(s, t, updated_distance);
         }
     }
-    else if (cover.count(s)){
+    else if (cover_mask[s]){
         for (const auto &w: out_neighbors.at(t)){
             if (out_neighbors.at(s).count(w)
                 || intersect_remove(out_neighbors.at(s),
@@ -295,14 +343,15 @@ void dynamic_k_reach::remove_edge(vertex_t s, vertex_t t)
 
 inline void dynamic_k_reach::insert_vertex(vertex_t v)
 {
-    mapping[v] = out_neighbors.size();
+    input_mapping[v] = out_neighbors.size();
     out_neighbors.resize(out_neighbors.size() + 1);
     in_neighbors.resize(in_neighbors.size() + 1);
+    cover_mask.resize(cover_mask.size() + 1);
 }
 
 void dynamic_k_reach::remove_vertex(vertex_t v)
 {
-    if (!map_vertex(v)){
+    if (!map_input_vertex(v)){
         return;
     }
     for (const auto &i: in_neighbors[v]){
@@ -315,7 +364,7 @@ void dynamic_k_reach::remove_vertex(vertex_t v)
     weight_t updated_distance;
     set<pair<vertex_t, vertex_t>> affected;
 
-    if (cover.count(v)){
+    if (cover_mask[v]){
         index_remove(v, v);
         // Identify affected
         for (const auto &p: in_index.at(v)){
@@ -334,15 +383,15 @@ void dynamic_k_reach::remove_vertex(vertex_t v)
         }
         out_index.erase(v);
         in_index.erase(v);
-        cover.erase(v);
+        cover_mask[v] = 0;
     }
     else {
         for (const auto &s: in_neighbors.at(v)){
-            if (!cover.count(s)){
+            if (!cover_mask[s]){
                 continue;
             }
             for (const auto &t: out_neighbors.at(v)){
-                if (!cover.count(t)){
+                if (!cover_mask[t]){
                     continue;
                 }
                 if (out_neighbors.at(s).count(t)
@@ -402,16 +451,16 @@ bool dynamic_k_reach::intersect_query(const graph_adj_t &graph_adj,
 
 bool dynamic_k_reach::query_reachability(vertex_t s, vertex_t t) const
 {
-    if (!map_vertex(s) || !map_vertex(t)){
-        return 0;
+    if (!map_input_vertex(s) || !map_input_vertex(t)){
+        return false;
     }
-    if (cover.count(s) && cover.count(t)) { // case 1
+    if (cover_mask[s] && cover_mask[t]) { // case 1
         return out_index.at(s).find(t) != out_index.at(s).end();
     }
-    else if (cover.count(s)) { // case 2
+    else if (cover_mask[s]) { // case 2
         return intersect_query(in_neighbors.at(t), out_index.at(s), k - 1);
     }
-    else if (cover.count(t)) { // case 3
+    else if (cover_mask[t]) { // case 3
         return intersect_query(out_neighbors.at(s), in_index.at(t), k - 1);
     }
     else { // case 4
@@ -435,7 +484,7 @@ void dynamic_k_reach::bfs_index(vertex_t s)
         vertex_t u = frontier.front();
         frontier.pop_front();
         --current_count;
-        if (cover.count(u)){
+        if (cover_mask[u]){
             index_insert(s, u, level);
             if (out_index.count(u) && u != s) {
                 for (const auto &i: out_index[u]) {
