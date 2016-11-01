@@ -66,6 +66,12 @@ int main()
             cout << "in1 == in2: " << in << endl;
             if (!out || !in){
                 cout << "ERROR" << endl;
+                auto outm = mismatch(out_1.begin(), out_1.end(), out_2.begin()), inm = mismatch(in_1.begin(), in_1.end(), in_2.begin());
+                auto out1v = *outm.first, out2v = *outm.second, in1v = *inm.first, in2v = *inm.second;
+
+                auto outvm = mismatch(out1v.begin(), out1v.end(), out2v.begin()), invm = mismatch(in1v.begin(), in1v.end(), in2v.begin());
+                auto out1mis = *outvm.first, out2mis = *outvm.second, in1mis = *invm.first, in2mis = *invm.second;
+
                 break;
             }
         }

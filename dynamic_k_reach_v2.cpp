@@ -209,11 +209,11 @@ void dynamic_k_reach_v2::index_invalidate(vertex_t s, vertex_t t)
     if (it == out_ind.end() || it != out_ind.end() && it->vertex != t) {
         return;
     }
-    it->weight = MAX_WEIGHT;
+    it->weight = MAX_WEIGHT / 2;
 
     auto &in_ind = in_index[t];
     it = lower_bound(in_ind.begin(), in_ind.end(), s);
-    it->weight = MAX_WEIGHT;
+    it->weight = MAX_WEIGHT / 2;
 }
 
 dynamic_k_reach_v2::index_adj_t::iterator dynamic_k_reach_v2::index_find(index_adj_t &ind, vertex_t v)
