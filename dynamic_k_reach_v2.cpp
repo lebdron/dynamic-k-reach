@@ -42,15 +42,6 @@ void dynamic_k_reach_v2::construct_index(
 
     generate_cover();
 
-    // DEBUG
-    /*cout << "Uncovered vertices: ";
-    for (size_t i = 0; i < num_vertices; ++i){
-        if (!cover[i]){
-            cout << i << " ";
-        }
-    }
-    cout << endl;*/
-
     {
         vector<pair<double_t, vertex_t>> order;
         order.reserve(num_vertices);
@@ -165,48 +156,45 @@ dynamic_k_reach_v2::neighbors_adj_t::iterator dynamic_k_reach_v2::neighbors_find
     return (it == nei.end() || it != nei.end() && *it != v) ? nei.end() : it;
 }
 
-void dynamic_k_reach_v2::index_insert(vertex_t s, vertex_t t, weight_t w)
+pair<dynamic_k_reach_v2::index_adj_t::iterator, dynamic_k_reach_v2::index_adj_t::iterator> dynamic_k_reach_v2::index_insert(vertex_t s, vertex_t t, weight_t w)
 {
-    auto &out_ind = out_index[s];
-    auto out_it = lower_bound(out_ind.begin(), out_ind.end(), t);
+    auto &out_ind = out_index[s],  &in_ind = in_index[t];
+    auto out_it = lower_bound(out_ind.begin(), out_ind.end(), t), in_it = lower_bound(in_ind.begin(), in_ind.end(), s);
     if (out_it != out_ind.end() && out_it->vertex == t && out_it->weight < w) {
-        return;
+        return make_pair(out_it, in_it);
     }
-
-    auto &in_ind = in_index[t];
-    auto in_it = lower_bound(in_ind.begin(), in_ind.end(), s);
 
     if (out_it != out_ind.end() && out_it->vertex == t) {
         out_it->weight = w;
         in_it->weight = w;
     }
     else {
-        out_ind.insert(out_it, index_entry_t(t, w));
-        in_ind.insert(in_it, index_entry_t(s, w));
+        out_it = out_ind.insert(out_it, index_entry_t(t, w));
+        in_it = in_ind.insert(in_it, index_entry_t(s, w));
     }
-
+    return make_pair(out_it, in_it);
 }
 
-void dynamic_k_reach_v2::index_remove(vertex_t s, vertex_t t)
+pair<dynamic_k_reach_v2::index_adj_t::iterator, dynamic_k_reach_v2::index_adj_t::iterator> dynamic_k_reach_v2::index_remove(vertex_t s, vertex_t t)
 {
-    auto &out_ind = out_index[s];
-    auto it = lower_bound(out_ind.begin(), out_ind.end(), t);
-    if (it == out_ind.end() || it != out_ind.end() && it->vertex != t) {
-        return;
+    auto &out_ind = out_index[s], &in_ind = in_index[t];
+    auto out_it = index_find(out_ind, t);
+    if (out_it == out_ind.end()) {
+        return make_pair(out_ind.end(), in_ind.end());
     }
-    out_ind.erase(it);
+    out_it = out_ind.erase(out_it);
 
-    auto &in_ind = in_index[t];
-    it = lower_bound(in_ind.begin(), in_ind.end(), s);
-    in_ind.erase(it);
+    auto in_it = index_find(in_ind, s);
+    in_it = in_ind.erase(in_it);
+    return make_pair(out_it, in_it);
 }
 
 
 void dynamic_k_reach_v2::index_invalidate(vertex_t s, vertex_t t)
 {
     auto &out_ind = out_index[s];
-    auto it = lower_bound(out_ind.begin(), out_ind.end(), t);
-    if (it == out_ind.end() || it != out_ind.end() && it->vertex != t) {
+    auto it = index_find(out_ind, t);
+    if (it == out_ind.end()) {
         return;
     }
     it->weight = MAX_WEIGHT / 2;
@@ -419,9 +407,6 @@ void dynamic_k_reach_v2::insert_edge_reindex(vertex_t s, vertex_t t)
 
     for (const auto &i : order) {
         bfs(i.second);
-        /*for (size_t i = 0; i < tmp_back; ++i) {
-            tmp_visited[tmp_frontier[i]] = 0;
-        }*/
         fill(tmp_visited.begin(), tmp_visited.end(), 0);
     }
 
@@ -455,18 +440,7 @@ void dynamic_k_reach_v2::remove_edge(vertex_t s, vertex_t t)
     neighbors_remove(s, t);
 
     if (cover[s] && cover[t]){
-        index_invalidate(s, t);
         identify_affected(s, t, 1);
-        weight_t updated_distance = reachable_neighbors(out_neighbors[s], in_neighbors[t]);
-        if (!updated_distance){
-            updated_distance = reachable_index(out_index[s], in_index[t]);
-        }
-        if (updated_distance){
-            index_insert(s, t, updated_distance);
-        }
-        else {
-            index_remove(s, t);
-        }
     }
     else if (cover[s]){
         for (const auto &w : out_neighbors[t]){
@@ -474,8 +448,7 @@ void dynamic_k_reach_v2::remove_edge(vertex_t s, vertex_t t)
             auto n_it = neighbors_find(out_nei, w);
             auto &out_ind = out_index[s];
             auto i_it = index_find(out_ind, w);
-            if (n_it != out_nei.end()
-                || i_it != out_ind.end() && reachable_neighbors(out_nei, in_nei) == i_it->weight){
+            if (n_it != out_nei.end() || i_it != out_ind.end() && reachable_neighbors(s, w) == i_it->weight){
                 continue;
             }
             identify_affected(s, w, 2);
@@ -487,16 +460,13 @@ void dynamic_k_reach_v2::remove_edge(vertex_t s, vertex_t t)
             auto n_it = neighbors_find(out_nei, t);
             auto &out_ind = out_index[w];
             auto i_it = index_find(out_ind, t);
-            if (n_it != out_nei.end()
-                || i_it != out_ind.end() && reachable_neighbors(out_nei, in_nei) == i_it->weight){
+            if (n_it != out_nei.end() || i_it != out_ind.end() && reachable_neighbors(w, t) == i_it->weight){
                 continue;
             }
             identify_affected(w, t, 2);
         }
     }
     update_affected();
-
-    tmp_affected.clear();
 }
 
 void dynamic_k_reach_v2::remove_edge_reindex(vertex_t s, vertex_t t)
@@ -528,9 +498,6 @@ void dynamic_k_reach_v2::remove_edge_reindex(vertex_t s, vertex_t t)
 
     for (const auto &i : order) {
         bfs(i.second);
-        /*for (size_t i = 0; i < tmp_back; ++i) {
-            tmp_visited[tmp_frontier[i]] = 0;
-        }*/
         fill(tmp_visited.begin(), tmp_visited.end(), 0);
     }
 
@@ -545,8 +512,8 @@ void dynamic_k_reach_v2::identify_affected(vertex_t s, vertex_t t, weight_t d)
     for (const auto &p : in_index[s]){
         for (const auto &q : out_index[t]){
             if (check_pair(p.vertex, q.vertex, p.weight, q.weight, d)){
-                affected.push_back(make_pair(p.vertex, q.vertex));
-                index_invalidate(p.vertex, q.vertex);
+                affected[make_pair(p.vertex, q.vertex)] = p.weight + q.weight + d;
+                index_invalidate(p.vertex, q.vertex); // remove this, affected should be enough
             }
         }
     }
@@ -555,26 +522,58 @@ void dynamic_k_reach_v2::identify_affected(vertex_t s, vertex_t t, weight_t d)
 void dynamic_k_reach_v2::update_affected()
 {
     auto &affected = tmp_affected;
-    for (const auto &p : affected){
-        weight_t updated_distance = reachable_index(out_index[p.first], in_index[p.second]);
-        if (updated_distance){
-            index_insert(p.first, p.second, updated_distance);
-        }
-        else {
-            index_remove(p.first, p.second);
-        }
+    while (affected.size()){
+        auto it = affected.begin();
+        vertex_t s = it->first.first, t = it->first.second;
+        index_find(out_index[s], t)->weight++;
+        index_find(in_index[t], s)->weight++;
+        fix_affected(s, t);
     }
 }
 
-weight_t dynamic_k_reach_v2::reachable_index(
-        const dynamic_k_reach_v2::index_adj_t &s_ind,
-        const dynamic_k_reach_v2::index_adj_t &t_ind) const
+pair<dynamic_k_reach_v2::index_adj_t::iterator, dynamic_k_reach_v2::index_adj_t::iterator>
+dynamic_k_reach_v2::fix_affected(vertex_t s, vertex_t t)
 {
+    weight_t updated_distance = 0;
+    if (tmp_affected[make_pair(s, t)] <= 2){
+        updated_distance = reachable_neighbors(s, t);
+    }
+    if (!updated_distance){
+        updated_distance = reachable_index(s, t);
+    }
+    tmp_affected.erase(make_pair(s, t));
+    if (updated_distance){
+        return index_insert(s, t, updated_distance);
+    }
+    else {
+        return index_remove(s, t);
+    }
+}
+
+weight_t dynamic_k_reach_v2::reachable_index(vertex_t s, vertex_t t)
+{
+    auto &s_ind = out_index[s], &t_ind = in_index[t];
     auto s_it = s_ind.begin();
     auto t_it = t_ind.begin();
     weight_t result = MAX_WEIGHT;
     while (s_it != s_ind.end() && t_it != t_ind.end()){
         if (s_it->vertex == t_it->vertex && s_it->weight && t_it->weight){
+            if (s_it->weight == MAX_WEIGHT / 2){
+                s_it->weight++;
+                index_find(in_index[s_it->vertex], s)->weight++;
+                s_it = fix_affected(s, s_it->vertex).first;
+                if (s_it->vertex != t_it->vertex){
+                    continue;
+                }
+            }
+            if (t_it->weight == MAX_WEIGHT / 2){
+                t_it->weight++;
+                index_find(out_index[t_it->vertex], t)->weight++;
+                t_it = fix_affected(t_it->vertex, t).second;
+                if (s_it->vertex != t_it->vertex){
+                    continue;
+                }
+            }
             result = min(result, weight_t(s_it->weight + t_it->weight));
             ++s_it;
             ++t_it;
@@ -589,12 +588,10 @@ weight_t dynamic_k_reach_v2::reachable_index(
     return (result == MAX_WEIGHT || result > k) ? 0 : result;
 }
 
-weight_t dynamic_k_reach_v2::reachable_neighbors(
-        const dynamic_k_reach_v2::neighbors_adj_t &s_nei,
-        const dynamic_k_reach_v2::neighbors_adj_t &t_nei) const
+weight_t dynamic_k_reach_v2::reachable_neighbors(vertex_t s, vertex_t t)
 {
-    auto s_it = s_nei.begin();
-    auto t_it = t_nei.begin();
+    auto &s_nei = out_neighbors[s], &t_nei = in_neighbors[t];
+    auto s_it = s_nei.begin(), t_it = t_nei.begin();
     while (s_it != s_nei.end() && t_it != t_nei.end()){
         if (*s_it == *t_it){
             return 2 <= k ? 2 : 0;
@@ -617,4 +614,143 @@ const vector<dynamic_k_reach_v2::index_adj_t> &dynamic_k_reach_v2::getOut_index(
 const vector<dynamic_k_reach_v2::index_adj_t> &dynamic_k_reach_v2::getIn_index() const
 {
     return in_index;
+}
+
+void dynamic_k_reach_v2::remove_vertex(vertex_t v)
+{
+    if (!mapping.count(v)){
+        return;
+    }
+//    auto v_old = v;
+    v = mapping.at(v);
+//    mapping.erase(v_old);
+    if (in_neighbors[v].empty() && out_neighbors[v].empty()){
+        return;
+    }
+
+    for (const auto &i : in_neighbors[v]){
+        out_neighbors[i].erase(neighbors_find(out_neighbors[i], v));
+    }
+    for (const auto &i : out_neighbors[v]){
+        in_neighbors[i].erase(neighbors_find(in_neighbors[i], v));
+    }
+
+    if (cover[v]){
+        index_remove(v, v);
+        for (const auto &i : in_index[v]){
+            out_index[i.vertex].erase(index_find(out_index[i.vertex], v));
+        }
+        for (const auto &i : out_index[v]){
+            in_index[i.vertex].erase(index_find(in_index[i.vertex], v));
+        }
+        identify_affected(v, v, 0);
+        out_index[v].clear();
+        in_index[v].clear();
+        cover[v] = 0;
+        tmp_cover_vertices.erase(find(tmp_cover_vertices.begin(), tmp_cover_vertices.end(), v));
+    }
+    else {
+        for (const auto &s : in_neighbors[v]){
+            if (!cover[s]){
+                continue;
+            }
+            for (const auto &t : out_neighbors[v]){
+                if (!cover[t]){
+                    continue;
+                }
+                auto &out_nei = out_neighbors[s], &in_nei = in_neighbors[t];
+                auto n_it = neighbors_find(out_nei, t);
+                auto &out_ind = out_index[s];
+                auto i_it = index_find(out_ind, t);
+                if (n_it != out_nei.end() || i_it != out_ind.end() && reachable_neighbors(s, t) == i_it->weight){
+                    continue;
+                }
+                identify_affected(s, t, 2);
+            }
+        }
+    }
+    update_affected();
+}
+
+void dynamic_k_reach_v2::remove_vertex_reindex(vertex_t v)
+{
+    if (!mapping.count(v)){
+        return;
+    }
+//    auto v_old = v;
+    v = mapping.at(v);
+//    mapping.erase(v_old);
+    if (in_neighbors[v].empty() && out_neighbors[v].empty()){
+        return;
+    }
+
+    for (const auto &i : in_neighbors[v]){
+        out_neighbors[i].erase(neighbors_find(out_neighbors[i], v));
+    }
+    for (const auto &i : out_neighbors[v]){
+        in_neighbors[i].erase(neighbors_find(in_neighbors[i], v));
+    }
+    out_neighbors[v].clear();
+    in_neighbors[v].clear();
+
+    for (const auto &i : tmp_cover_vertices){
+        out_index[i].clear();
+        in_index[i].clear();
+    }
+    if (cover[v]){
+        cover[v] = 0;
+        tmp_cover_vertices.erase(find(tmp_cover_vertices.begin(), tmp_cover_vertices.end(), v));
+    }
+    size_t num_vertices = out_neighbors.size();
+    vector<pair<double_t, vertex_t>> order;
+    order.reserve(num_vertices);
+    for (const auto &vtx : tmp_cover_vertices) {
+        order.push_back(make_pair((double_t) out_neighbors[vtx].size()
+                                  / in_neighbors[vtx].size(), vtx));
+    }
+    sort(order.begin(), order.end());
+
+    tmp_visited.resize(num_vertices);
+    tmp_frontier.resize(num_vertices);
+
+    for (const auto &i : order) {
+        bfs(i.second);
+        fill(tmp_visited.begin(), tmp_visited.end(), 0);
+    }
+
+    tmp_visited.clear();
+    tmp_frontier.clear();
+}
+
+void dynamic_k_reach_v2::remove_vertex_edges(vertex_t v)
+{
+    if (!mapping.count(v)){
+        return;
+    }
+//    auto v_old = v;
+    v = mapping.at(v);
+//    mapping.erase(v_old);
+    if (in_neighbors[v].empty() && out_neighbors[v].empty()){
+        return;
+    }
+
+    unordered_map<vertex_t, vertex_t> rev_mapping;
+    for (const auto &e : mapping){
+        rev_mapping[e.second] = e.first;
+    }
+
+    auto in_nei = in_neighbors[v], out_nei = out_neighbors[v];
+    for (const auto &i : in_nei){
+        remove_edge(rev_mapping[i], rev_mapping[v]);
+    }
+    for (const auto &i : out_nei){
+        remove_edge(rev_mapping[v], rev_mapping[i]);
+    }
+
+    if (cover[v]){
+        cover[v] = 0;
+        tmp_cover_vertices.erase(find(tmp_cover_vertices.begin(), tmp_cover_vertices.end(), v));
+        in_index[v].clear();
+        out_index[v].clear();
+    }
 }

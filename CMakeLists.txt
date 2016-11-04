@@ -4,8 +4,8 @@ project(dyn_k_reach)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 #Boost
-#find_package(Boost REQUIRED)
-#include_directories(${Boost_INCLUDE_DIRS})
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
 
 set(SOURCE_FILES main.cpp dynamic_k_reach_v2.cpp)
 add_executable(dyn_k_reach ${SOURCE_FILES})

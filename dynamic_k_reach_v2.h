@@ -4,10 +4,15 @@
 #include <utility>
 #include <limits>
 #include <unordered_map>
+#include <unordered_set>
+
+#include <boost/functional/hash.hpp>
 
 #include "common.h"
 
 class dynamic_k_reach_v2 {
+
+public:
     struct index_entry_t {
         vertex_t vertex;
         weight_t weight;
@@ -32,12 +37,11 @@ class dynamic_k_reach_v2 {
     weight_t k;
     std::vector<neighbors_adj_t> out_neighbors, in_neighbors;
     std::vector<index_adj_t> out_index, in_index;
-public:
+
     const std::vector<index_adj_t> &getOut_index() const;
 
     const std::vector<index_adj_t> &getIn_index() const;
 
-private:
     std::vector<uint8_t> cover;
 
     std::unordered_map<vertex_t, vertex_t> mapping;
@@ -46,7 +50,8 @@ private:
     std::vector<uint8_t> tmp_visited;
     std::vector<vertex_t> tmp_frontier, tmp_cover_vertices;
     size_t tmp_back;
-    std::vector<std::pair<vertex_t, vertex_t>> tmp_affected;
+    std::unordered_map<std::pair<vertex_t, vertex_t>, weight_t,
+            boost::hash<std::pair<vertex_t, vertex_t>>> tmp_affected;
 
     void generate_cover();
 
@@ -56,9 +61,9 @@ private:
 
     neighbors_adj_t::iterator neighbors_find(neighbors_adj_t &nei, vertex_t v);
 
-    void index_insert(vertex_t s, vertex_t t, weight_t w);
+    std::pair<index_adj_t::iterator, index_adj_t::iterator> index_insert(vertex_t s, vertex_t t, weight_t w);
 
-    void index_remove(vertex_t s, vertex_t t);
+    std::pair<index_adj_t::iterator, index_adj_t::iterator> index_remove(vertex_t s, vertex_t t);
 
     void index_invalidate(vertex_t s, vertex_t t);
 
@@ -77,11 +82,12 @@ private:
 
     void update_affected();
 
-    weight_t reachable_index(const index_adj_t &s_ind, const index_adj_t &t_ind) const;
+    std::pair<index_adj_t::iterator, index_adj_t::iterator> fix_affected(vertex_t s, vertex_t t);
 
-    weight_t reachable_neighbors(const neighbors_adj_t &s_nei, const neighbors_adj_t &t_nei) const;
+    weight_t reachable_index(vertex_t s, vertex_t t);
 
-public:
+    weight_t reachable_neighbors(vertex_t s, vertex_t t);
+
     void construct_index(const std::vector<std::pair<vertex_t, vertex_t>> &edges, weight_t k);
 
     bool query_reachability(vertex_t s, vertex_t t) const;
@@ -93,4 +99,10 @@ public:
     void insert_edge_reindex(vertex_t s, vertex_t t);
 
     void remove_edge_reindex(vertex_t s, vertex_t t);
+
+    void remove_vertex(vertex_t v);
+
+    void remove_vertex_reindex(vertex_t v);
+
+    void remove_vertex_edges(vertex_t v);
 };
