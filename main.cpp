@@ -42,7 +42,7 @@ int main()
         cout << "in1 == in2: " << (in_1 == in_2) << endl;
     }
 
-    auto rand_vtx = bind(uniform_int_distribution<vertex_t>(0, max_id), default_random_engine());
+   /* auto rand_vtx = bind(uniform_int_distribution<vertex_t>(0, max_id), default_random_engine());
 
     for (uint8_t i = 0; i < 100; ++i) {
         vertex_t v = rand_vtx();
@@ -51,6 +51,7 @@ int main()
             continue;
         }
         cout << "Random vertex: " << v << endl;
+
         double ins = -GetCurrentTimeSec();
 //        dkr1.remove_vertex(v);
         dkr1.remove_vertex_edges(v);
@@ -66,10 +67,15 @@ int main()
             cout << "After removal:" << endl;
             auto out_1 = dkr1.getOut_index(), out_2 = dkr2.getOut_index(), in_1 = dkr1.getIn_index(), in_2 = dkr2.getIn_index();
             bool out = out_1 == out_2, in = in_1 == in_2;
+            bool onei = dkr1.out_neighbors == dkr2.out_neighbors, inei = dkr1.in_neighbors == dkr2.in_neighbors;
             cout << "out1 == out2: " << out << endl;
             cout << "in1 == in2: " << in << endl;
-            if (!out || !in){
+            cout << "onei1 == onei2: " << onei << endl;
+            cout << "inei1 == inei2: " << inei << endl;
+            if (!out || !in || !onei || !inei){
                 cout << "ERROR" << endl;
+
+
                 auto outm = mismatch(out_1.begin(), out_1.end(), out_2.begin()), inm = mismatch(in_1.begin(), in_1.end(), in_2.begin());
                 auto out1v = *outm.first, out2v = *outm.second, in1v = *inm.first, in2v = *inm.second;
                 auto out1vtx = outm.first - out_1.begin(), out2vtx = outm.second - out_2.begin(),
@@ -82,9 +88,9 @@ int main()
                 break;
             }
         }
-    }
+    }*/
 
-    /*auto rand_edge = bind(uniform_int_distribution<size_t>(0, edges.size() - 1), default_random_engine());
+    auto rand_edge = bind(uniform_int_distribution<size_t>(0, edges.size() - 1), default_random_engine());
 
     for (uint8_t i = 0; i < 100; ++i){
         size_t e = rand_edge();
@@ -122,7 +128,7 @@ int main()
                 break;
             }
         }
-    }*/
+    }
 
     /*auto rand_vtx = bind(uniform_int_distribution<vertex_t>(0, max_id), default_random_engine());
 
