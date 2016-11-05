@@ -4,8 +4,10 @@
 #include <functional>
 #include <sys/time.h>
 
-#include "dynamic_k_reach.h"
-#include "dynamic_k_reach_v2.h"
+/*#include "dynamic_k_reach.h"
+#include "dynamic_k_reach_v2.h"*/
+#include "common.h"
+#include "dynamic_k_reach_v3.h"
 
 using namespace std;
 
@@ -29,7 +31,9 @@ int main()
         }
     }
 
-    dynamic_k_reach_v2 dkr1, dkr2;
+    dynamic_k_reach_v3 dkr;
+
+    /*dynamic_k_reach_v2 dkr1, dkr2;
     dkr1.construct_index(edges, 3);
     cout << "Constructed 1" << endl;
     dkr2.construct_index(edges, 3);
@@ -52,8 +56,8 @@ int main()
         }
         cout << "Random vertex: " << v << endl;
         double ins = -GetCurrentTimeSec();
-//        dkr1.remove_vertex(v);
-        dkr1.remove_vertex_edges(v);
+        dkr1.remove_vertex(v);
+//        dkr1.remove_vertex_edges(v);
         ins += GetCurrentTimeSec();
         cout << "Removed 1 in " << ins << endl;
         double ins_rei = -GetCurrentTimeSec();
@@ -79,10 +83,10 @@ int main()
                 auto out1mis = *outvm.first, out2mis = *outvm.second, in1mis = *invm.first, in2mis = *invm.second;
                 auto out1id = outvm.first - out1v.begin(), out2id = outvm.second - out2v.begin(),
                         in1id = invm.first - in1v.begin(), in2id = invm.second - in2v.begin();
-                break;
+                break; // 231 -3> 352 missing
             }
         }
-    }
+    }*/
 
     /*auto rand_edge = bind(uniform_int_distribution<size_t>(0, edges.size() - 1), default_random_engine());
 
