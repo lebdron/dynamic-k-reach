@@ -4,8 +4,6 @@
 #include <functional>
 #include <sys/time.h>
 
-/*#include "dynamic_k_reach.h"
-#include "dynamic_k_reach_v2.h"*/
 #include "common.h"
 #include "dynamic_k_reach_v3.h"
 
@@ -32,6 +30,8 @@ int main()
     }
 
     dynamic_k_reach_v3 dkr;
+    dkr.construct_index(edges, 3);
+    cout << "Done!" << endl;
 
     /*dynamic_k_reach_v2 dkr1, dkr2;
     dkr1.construct_index(edges, 3);
@@ -94,7 +94,7 @@ int main()
         }
     }*/
 
-    auto rand_edge = bind(uniform_int_distribution<size_t>(0, edges.size() - 1), default_random_engine());
+    /*auto rand_edge = bind(uniform_int_distribution<size_t>(0, edges.size() - 1), default_random_engine());
 
     for (uint8_t i = 0; i < 100; ++i){
         size_t e = rand_edge();
@@ -132,7 +132,7 @@ int main()
                 break;
             }
         }
-    }
+    }*/
 
     /*auto rand_vtx = bind(uniform_int_distribution<vertex_t>(0, max_id), default_random_engine());
 
