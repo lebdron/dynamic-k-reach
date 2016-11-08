@@ -8,7 +8,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include "common.h"
+#include "../common/common.h"
 
 class dynamic_k_reach_v2 {
 

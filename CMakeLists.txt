@@ -1,18 +1,18 @@
 cmake_minimum_required(VERSION 3.6)
-project(dyn_k_reach)
+project(DynamicKReachability)
 
 add_definitions(-std=c++14)
 
-#Boost
-#[[find_package(Boost REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})]]
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wpedantic -Wextra -Werror")
 
 set(SOURCE_FILES main.cpp)
-add_executable(dyn_k_reach ${SOURCE_FILES})
+add_executable(main ${SOURCE_FILES})
 
-include_directories(dynamic_k_reach)
+include_directories(common)
+include_directories(indexes)
 
-add_subdirectory(dynamic_k_reach)
+add_subdirectory(common)
+add_subdirectory(indexes)
 add_subdirectory(test)
 
-target_link_libraries(dyn_k_reach dynamic_k_reach)
+target_link_libraries(main indexes common)

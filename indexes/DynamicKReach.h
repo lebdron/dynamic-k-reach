@@ -1,0 +1,15 @@
+//
+// Created by andrey on 11/8/16.
+//
+
+#ifndef DYNAMICKREACHABILITY_DYNAMICKREACH_H
+#define DYNAMICKREACHABILITY_DYNAMICKREACH_H
+
+
+class DynamicKReach
+{
+
+};
+
+
+#endif //DYNAMICKREACHABILITY_DYNAMICKREACH_H

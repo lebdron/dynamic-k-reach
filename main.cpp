@@ -3,9 +3,9 @@
 #include <random>
 #include <functional>
 #include <sys/time.h>
+#include <DynamicKReachBase.h>
 
-#include "common.h"
-#include "dynamic_k_reach_v3.h"
+#include "common/common.h"
 
 using namespace std;
 
@@ -18,7 +18,8 @@ double GetCurrentTimeSec()
 
 int main()
 {
-    vector<edge_t> edges;
+
+    /*vector<Edge> edges;
     vertex_t max_id = 0;
     {
         string filename("HepTh");
@@ -29,9 +30,9 @@ int main()
         }
     }
 
-    dynamic_k_reach_v3 dkr;
+    DynamicKReach dkr;
     dkr.construct_index(edges, 3);
-    cout << "Done!" << endl;
+    cout << "Done!" << endl;*/
 
     /*dynamic_k_reach_v2 dkr1, dkr2;
     dkr1.construct_index(edges, 3);
@@ -46,7 +47,7 @@ int main()
         cout << "in1 == in2: " << (in_1 == in_2) << endl;
     }
 
-   /* auto rand_vtx = bind(uniform_int_distribution<vertex_t>(0, max_id), default_random_engine());
+    auto rand_vtx = bind(uniform_int_distribution<vertex_t>(0, max_id), default_random_engine());
 
     for (uint8_t i = 0; i < 100; ++i) {
         vertex_t v = rand_vtx();
@@ -92,9 +93,9 @@ int main()
                 break; // 231 -3> 352 missing
             }
         }
-    }*/
+    }
 
-    /*auto rand_edge = bind(uniform_int_distribution<size_t>(0, edges.size() - 1), default_random_engine());
+    auto rand_edge = bind(uniform_int_distribution<size_t>(0, edges.size() - 1), default_random_engine());
 
     for (uint8_t i = 0; i < 100; ++i){
         size_t e = rand_edge();
@@ -132,9 +133,9 @@ int main()
                 break;
             }
         }
-    }*/
+    }
 
-    /*auto rand_vtx = bind(uniform_int_distribution<vertex_t>(0, max_id), default_random_engine());
+    auto rand_vtx = bind(uniform_int_distribution<vertex_t>(0, max_id), default_random_engine());
 
     for (uint8_t i = 0; i < 100; ++i) {
         vertex_t s = rand_vtx(), t = rand_vtx();

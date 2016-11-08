@@ -11,7 +11,7 @@ typedef uint32_t vertex_t;
 typedef std::pair<vertex_t, vertex_t> edge_t;
 typedef uint8_t weight_t;
 
-class dynamic_k_reach {
+class dynamic_k_reach_v1 {
     typedef std::pair<vertex_t, weight_t> index_entry_t;
     typedef std::set<vertex_t> graph_adj_t;
     typedef std::vector<graph_adj_t> graph_t;
