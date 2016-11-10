@@ -17,4 +17,8 @@ public:
     void remove(vertex_t v);
 
     void clear();
+
+    size_t size() const;
+
+    bool operator==(const Mapper &mapper) const;
 };

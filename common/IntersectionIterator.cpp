@@ -25,6 +25,9 @@ IntersectionIterator::IntersectionIterator(AdjacentIterator a, AdjacentIterator 
 
 IntersectionIterator &IntersectionIterator::operator++()
 {
+    assert(*a == *b);
+    assert(a != a_end && b != b_end);
+
     ++a;
     ++b;
     next();
@@ -40,5 +43,8 @@ IntersectionIterator IntersectionIterator::operator++(int)
 
 const vertex_t &IntersectionIterator::operator*() const
 {
+    assert(*a == *b);
+    assert(a != a_end && b != b_end);
+
     return *a;
 }

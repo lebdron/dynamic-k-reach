@@ -18,4 +18,14 @@ public:
     ConstIterator begin() const;
 
     ConstIterator end() const;
+
+    bool operator==(const AdjacencyList &adj) const;
+
+    bool operator!=(const AdjacencyList &adj) const;
+
+    size_t degree() const;
+
+    void clear();
+
+    bool empty() const;
 };

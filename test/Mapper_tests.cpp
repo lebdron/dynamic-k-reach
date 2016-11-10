@@ -32,3 +32,20 @@ TEST_F(MapperTest, PresentTest)
     ASSERT_TRUE(mapper.present(1));
     ASSERT_FALSE(mapper.present(2));
 }
+
+TEST_F(MapperTest, SizeTest)
+{
+    Mapper mapper;
+    mapper.insert(1);
+    mapper.insert(2);
+
+    ASSERT_EQ(mapper.size(), size_t(2));
+
+    mapper.remove(1);
+
+    ASSERT_EQ(mapper.size(), size_t(2));
+
+    mapper.remove(2);
+
+    ASSERT_EQ(mapper.size(), size_t(2));
+}

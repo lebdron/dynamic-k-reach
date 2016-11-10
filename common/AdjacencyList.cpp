@@ -19,3 +19,28 @@ AdjacencyList::ConstIterator AdjacencyList::end() const
 {
     return ConstIterator(out.end(), out.end(), in.end(), in.end());
 }
+
+bool AdjacencyList::operator==(const AdjacencyList &adj) const {
+    return out == adj.out && in == adj.in;
+}
+
+bool AdjacencyList::operator!=(const AdjacencyList &adj) const
+{
+    return !(*this == adj);
+}
+
+size_t AdjacencyList::degree() const
+{
+    return out.size() + in.size();
+}
+
+void AdjacencyList::clear()
+{
+    out.clear();
+    in.clear();
+}
+
+bool AdjacencyList::empty() const
+{
+    return !degree();
+}

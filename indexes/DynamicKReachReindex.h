@@ -1,15 +1,15 @@
-//
-// Created by andrey on 11/8/16.
-//
+#pragma once
 
-#ifndef DYNAMICKREACHABILITY_DYNAMICKREACHREINDEX_H
-#define DYNAMICKREACHABILITY_DYNAMICKREACHREINDEX_H
+#include "DynamicKReachBase.h"
 
-
-class DynamicKReachReindex
+class DynamicKReachReindex : public DynamicKReachBase
 {
+    void clear_index();
 
+public:
+    void insert_edge(vertex_t s, vertex_t t);
+
+    void remove_edge(vertex_t s, vertex_t t);
+
+    void remove_vertex(vertex_t v);
 };
-
-
-#endif //DYNAMICKREACHABILITY_DYNAMICKREACHREINDEX_H

@@ -52,3 +52,11 @@ void Mapper::clear()
     free.clear();
 }
 
+size_t Mapper::size() const {
+    return mapping.size() + free.size();
+}
+
+bool Mapper::operator==(const Mapper &mapper) const {
+    return mapping == mapper.mapping && free == mapper.free;
+}
+

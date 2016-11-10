@@ -5,6 +5,11 @@ add_definitions(-std=c++14)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wpedantic -Wextra -Werror")
 
+find_package(Boost)
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+endif()
+
 set(SOURCE_FILES main.cpp)
 add_executable(main ${SOURCE_FILES})
 

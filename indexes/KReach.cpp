@@ -12,6 +12,26 @@ void KReach::clear()
     mapper.clear();
 }
 
+void KReach::generate_index()
+{
+    multimap<double_t, vertex_t> order;
+    for_each(index.begin(), index.end(), [&order, this](const auto &v) {
+        order.insert(make_pair(double_t(graph[v.first].out.size()) / graph[v.first].in.size(), v.first));
+    });
+    for_each(order.begin(), order.end(), [this](const auto &v) {
+        this->bfs(v.second);
+    });
+
+    for (const auto &u : index){
+        for (const auto &v : u.second.out){
+            assert(weight.defined(u.first, v));
+        }
+        for (const auto &v : u.second.in){
+            assert(weight.defined(v, u.first));
+        }
+    }
+}
+
 void KReach::construct_index(vector<Edge> edges, weight_t k)
 {
     clear();
@@ -37,27 +57,19 @@ void KReach::construct_index(vector<Edge> edges, weight_t k)
         });
     }
     generate_cover();
-    {
-        multimap<double_t, vertex_t> order;
-        for_each(index.begin(), index.end(), [&order, this](const auto &v) {
-            order.insert(make_pair(double_t(graph[v.first].out.size()) / graph[v.first].in.size(), v.first));
-        });
-        for_each(order.begin(), order.end(), [this](const auto &v) {
-            this->bfs(v.second);
-        });
-    }
+    generate_index();
 }
 
 void KReach::generate_cover()
 {
     assert(index.empty());
 
-    for (vertex_t s = 0; s < graph.size(); ++s){
-        if (index.count(s)){
+    for (vertex_t s = 0; s < graph.size(); ++s) {
+        if (index.count(s)) {
             continue;
         }
-        find_if(graph.at(s).begin(), graph.at(s).end(), [s, this](const auto &t){
-            if (index.count(t)){
+        find_if(graph.at(s).begin(), graph.at(s).end(), [s, this](const auto &t) {
+            if (index.count(t)) {
                 return false;
             }
             index[s];
@@ -78,18 +90,19 @@ void KReach::bfs(vertex_t s)
     frontier.push(s);
     index.insert(s, s);
     weight(s, s) = 0;
-    for (weight_t level = 0; !frontier.empty() && level < k ; ++level) {
+    for (weight_t level = 0; !frontier.empty() && level < k; ++level) {
         size_t num_frontiers = frontier.size();
         for (size_t i = 0; i < num_frontiers; ++i) {
             vertex_t u = frontier.front();
             frontier.pop();
-            for_each(graph[u].out.begin(), graph[u].out.end(), [s, &visited, &frontier, level, this](const auto &v) {
+//            for_each(graph[u].out.begin(), graph[u].out.end(), [s, &visited, &frontier, level, this](const auto &v) {
+            for (const auto &v : graph[u].out) {
                 if (visited.count(v)) {
                     return;
                 }
                 visited.insert(v);
                 if (index.count(v)) {
-                    if (weight.defined(s, v) && weight(s, v) <= level + 1) {
+                    /*if (weight.defined(s, v) && weight(s, v) <= level + 1) {
                         return;
                     }
                     if (!index[v].out.empty()) {
@@ -104,57 +117,63 @@ void KReach::bfs(vertex_t s)
                         });
                         return;
                     }
-                    if (!weight.defined(s, v)) {
-                        index.insert(s, v);
-                        weight(s, v) = level + 1;
-                    }
+                    if (!weight.defined(s, v)) {*/
+                    index.insert(s, v);
+                    weight(s, v) = level + 1;
+                    /*}
                     else {
                         weight(s, v) = level + 1;
                     }
                 }
                 if (graph[v].out.empty()) {
-                    return;
+                    return;*/
                 }
                 frontier.push(v);
-            });
+//            });
+            }
         }
     }
 }
 
 bool KReach::query(vertex_t s, vertex_t t) const
 {
-    if (!mapper.present(s) || !mapper.present(t)){
+    if (!mapper.present(s) || !mapper.present(t)) {
         return false;
     }
+
+    if (s == t){
+        return true;
+    }
+
     s = mapper.query(s);
     t = mapper.query(t);
 
-    if (index.count(s) && index.count(t)){
+    if (index.count(s) && index.count(t)) {
         return index.at(s).out.count(t) != 0;
     }
-    else if (index.count(s)){
+    else if (index.count(s)) {
         const auto &is = index.at(s).out, &gt = graph.at(t).in;
         IntersectionIterator begin(is.begin(), is.end(), gt.begin(), gt.end()),
                 end(is.end(), is.end(), gt.end(), gt.end());
-        return find_if(begin, end, [s, this](const auto &v){
+        return find_if(begin, end, [s, this](const vertex_t &v) {
             return weight(s, v) <= k - 1;
         }) != end;
     }
-    else if (index.count(t)){
+    else if (index.count(t)) {
         const auto &gs = graph.at(s).out, &it = index.at(t).in;
         IntersectionIterator begin(it.begin(), it.end(), gs.begin(), gs.end()),
                 end(it.end(), it.end(), gs.end(), gs.end());
-        return find_if(begin, end, [t, this](const auto &v){
+        return find_if(begin, end, [t, this](const vertex_t &v) {
             return weight(v, t) <= k - 1;
         }) != end;
     }
     else {
         const auto &gs = graph.at(s).out;
-        return find_if(gs.begin(), gs.end(), [](const auto &i){
+        return find_if(gs.begin(), gs.end(), [t, this](const vertex_t &i) {
             const auto &ii = index.at(i).out, &gt = graph.at(t).in;
             IntersectionIterator begin(ii.begin(), ii.end(), gt.begin(), gt.end()),
                     end(ii.end(), ii.end(), gt.end(), gt.end());
-            return find_if(begin, end, [](const auto &v){
+            return find_if(begin, end, [i, this](const vertex_t &v) {
                 return weight(i, v) <= k - 2;
             }) != end;
         }) != gs.end();
