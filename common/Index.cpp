@@ -23,3 +23,8 @@ void Index::remove(vertex_t s, vertex_t t)
     assert(!at(s).out.count(t));
     assert(!at(t).in.count(s));
 }
+
+bool Index::has(vertex_t s, vertex_t t) const
+{
+    return at(s).out.count(t) != 0;
+}

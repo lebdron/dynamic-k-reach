@@ -12,4 +12,6 @@ public:
     void insert(vertex_t s, vertex_t t);
 
     void remove(vertex_t s, vertex_t t);
+
+    bool has(vertex_t s, vertex_t t) const;
 };

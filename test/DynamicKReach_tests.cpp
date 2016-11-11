@@ -182,22 +182,13 @@ TEST_F(DynamicKReachTest, RemovalStressTest)
         dkr.remove_edge(edges[e].first, edges[e].second);
         dkrr.remove_edge(edges[e].first, edges[e].second);
 
-        ASSERT_TRUE(IntersectionIterator(dkr.graph[556].out.begin(), dkr.graph[556].out.end(),
-                                         dkr.graph[223].in.begin(), dkr.graph[223].in.end())
-                    != IntersectionIterator(dkr.graph[556].out.end(), dkr.graph[556].out.end(),
-                                            dkr.graph[223].in.end(), dkr.graph[223].in.end()));
-        ASSERT_TRUE(IntersectionIterator(dkrr.graph[556].out.begin(), dkrr.graph[556].out.end(),
-                                         dkrr.graph[223].in.begin(), dkrr.graph[223].in.end())
-                    != IntersectionIterator(dkrr.graph[556].out.end(), dkrr.graph[556].out.end(),
-                                            dkrr.graph[223].in.end(), dkrr.graph[223].in.end()));
-
+        ASSERT_EQ(dkr.mapper, dkrr.mapper);
         ASSERT_EQ(dkr.graph, dkrr.graph);
         for (const auto &v : dkr.index){
-            std::cout << "Indexed vertex: " << v.first << std::endl;
-            ASSERT_EQ(v.second.out, dkrr.index[v.first].out);
-            ASSERT_EQ(v.second.in, dkrr.index[v.first].in);
+//            std::cout << "Indexed vertex: " << v.first << std::endl;
+            ASSERT_EQ(dkr.index.at(v.first).out, dkrr.index.at(v.first).out);
+            ASSERT_EQ(dkr.index.at(v.first).in, dkrr.index.at(v.first).in);
         }
         ASSERT_EQ(dkr.weight, dkrr.weight);
-        ASSERT_EQ(dkr.mapper, dkrr.mapper);
     }
 }

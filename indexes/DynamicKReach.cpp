@@ -1,27 +1,24 @@
 #include <IntersectionIterator.h>
+#include <iostream>
 #include "DynamicKReach.h"
+// TODO remove iostream
 
 using namespace std;
 
 void DynamicKReach::insert_update(vertex_t s, vertex_t t, weight_t d)
 {
-    for_each(index[s].in.begin(), index[s].in.end(), [s, t, d, this](const auto &p) {
-        if (weight(p, s) == k - d + 1) {
-            return;
-        }
-        for_each(index[t].out.begin(), index[t].out.end(), [s, t, p, d, this](const auto &q) {
-            if (weight(t, q) == k - d + 1) {
-                return;
-            }
+    for (const auto &p: index[s].in) {
+        for (const auto &q : index[t].out) {
             if (weight.defined(p, q) && weight(p, s) + weight(t, q) + d < weight(p, q)) {
-                weight(p, q) = weight(p, s) + weight(t, q) + d;
+                weight.undefine(p, q);
+                weight.define(p, q, weight(p, s) + weight(t, q) + d);
             }
             else if (!weight.defined(p, q) && weight(p, s) + weight(t, q) + d <= k) {
                 index.insert(p, q);
-                weight(p, q) = weight(p, s) + weight(t, q) + d;
+                weight.define(p, q, weight(p, s) + weight(t, q) + d);
             }
-        });
-    });
+        }
+    }
 }
 
 void DynamicKReach::insert_edge(vertex_t s, vertex_t t)
@@ -33,43 +30,55 @@ void DynamicKReach::insert_edge(vertex_t s, vertex_t t)
         vertex_t v = (graph[s].degree() > graph[t].degree()) ? s : t;
         index[v];
         index.insert(v, v);
-        weight(v, v) = 0;
-        for_each(graph[v].out.begin(), graph[v].out.end(), [v, this](const auto &w) {
-            for_each(index[w].out.begin(), index[w].out.end(), [v, w, this](const auto &q) {
+        weight.define(v, v, 0);
+        for (const auto &w : graph[v].out) {
+            for (const auto &q : index[w].out) {
                 if (!weight.defined(v, q) && weight(w, q) + 1 <= k) {
                     index.insert(v, q);
-                    weight(v, q) = weight(w, q) + 1;
+                    weight.define(v, q, weight(w, q) + 1);
                 }
-            });
-        });
-        for_each(graph[v].in.begin(), graph[v].in.end(), [v, this](const auto &w) {
-            for_each(index[w].in.begin(), index[w].in.end(), [v, w, this](const auto &p) {
+            }
+        }
+        for (const auto &w : graph[v].in) {
+            for (const auto &p : index[w].in) {
                 if (!weight.defined(p, v) && weight(p, w) + 1 <= k) {
                     index.insert(p, v);
-                    weight(p, v) = weight(p, w) + 1;
+                    weight.define(p, v, weight(p, w) + 1);
                 }
-            });
-        });
+            }
+        }
     }
 
     if (index.count(s) && index.count(t)) {
         insert_update(s, t, 1);
     }
     else if (index.count(s)) {
-        for_each(graph[t].out.begin(), graph[t].out.end(), [s, this](const auto &w) {
-            this->insert_update(s, w, 2);
-        });
+        for (const auto &w : graph[t].out) {
+            insert_update(s, w, 2);
+        }
     }
     else {
-        for_each(graph[s].in.begin(), graph[s].in.end(), [t, this](const auto &w) {
-            this->insert_update(w, t, 2);
-        });
+        for (const auto &w : graph[s].in) {
+            insert_update(w, t, 2);
+        }
     }
 }
 
 void DynamicKReach::remove_edge(vertex_t s, vertex_t t)
 {
     DynamicKReachBase::remove_edge(s, t);
+
+    for (const auto &u : index){
+        for (const auto &v : u.second.out){
+            assert(weight.defined(u.first, v));
+        }
+        for (const auto &v : u.second.in){
+            assert(weight.defined(v, u.first));
+        }
+    }
+    for (const auto &p : weight){
+        assert(index.at(p.first.first).out.count(p.first.second));
+    }
 
     s = mapper.query(s);
     t = mapper.query(t);
@@ -82,28 +91,31 @@ void DynamicKReach::remove_edge(vertex_t s, vertex_t t)
     else if (index.count(s)) {
         for (const auto &w : graph[t].out) {
             // prune if s -1> w, or s -2> w not through t
-            /*if (graph[s].out.count(w)
-                || IntersectionIterator(graph[s].out.begin(), graph[s].out.end(),
-                                        graph[w].in.begin(), graph[w].in.end())
-                   != IntersectionIterator(graph[s].out.end(), graph[s].out.end(),
-                                           graph[w].in.end(), graph[w].in.end())) {
-                return;
-            }*/
+            if (graph.has(s, w) || IntersectionIterator(graph.at(s).out.begin(), graph.at(s).out.end(), graph.at(w)
+                    .in.begin(), graph.at(w).in.end()) != IntersectionIterator(graph.at(s).out.end(), graph.at(s).out
+                    .end(), graph.at(w).in.end(), graph.at(w).in.end())){
+                continue;
+            }
             remove_identify(s, w, 2, identified);
         }
     }
     else {
         for (const auto &w : graph[s].in) {
             // prune if w -1> t, or w -2> t not through s
-            /*if (graph[w].out.count(t)
-                || IntersectionIterator(graph[w].out.begin(), graph[w].out.end(),
-                                        graph[t].in.begin(), graph[t].in.end())
-                   != IntersectionIterator(graph[w].out.end(), graph[w].out.end(),
-                                           graph[t].in.end(), graph[t].in.end())) {
-                return;
-            }*/
+            if (graph.has(w, t) || IntersectionIterator(graph.at(w).out.begin(), graph.at(w).out.end(), graph.at(t)
+                    .in.begin(), graph.at(t).in.end()) != IntersectionIterator(graph.at(w).out.end(), graph.at(w).out
+                    .end(), graph.at(t).in.end(), graph.at(t).in.end())){
+                continue;
+            }
             remove_identify(w, t, 2, identified);
         }
+    }
+
+    for (const auto &e : identified){
+        if (weight.defined(e.first, e.second)){
+            std::cout << e.first << " " << e.second << std::endl;
+        }
+        assert(!weight.defined(e.first, e.second));
     }
 
     while (!identified.empty()){
@@ -119,6 +131,9 @@ void DynamicKReach::remove_edge(vertex_t s, vertex_t t)
             assert(weight.defined(v, u.first));
         }
     }
+    for (const auto &p : weight){
+        assert(index.at(p.first.first).out.count(p.first.second));
+    }
 }
 
 void DynamicKReach::remove_vertex(vertex_t v)
@@ -128,47 +143,36 @@ void DynamicKReach::remove_vertex(vertex_t v)
 
 void DynamicKReach::remove_identify(vertex_t s, vertex_t t, weight_t d, std::unordered_set<Edge, EdgeHash> &identified)
 {
-    for (const auto &p : index[s].in){
-        if (weight(p, s) == k - d + 1) {
+    for (const auto &p : index.at(s).in){
+        if (!weight.defined(p, s) || weight(p, s) == k){
             continue;
         }
-        for (const auto &q : index[t].out){
-            if (weight(t, q) == k - d + 1) {
+        for (const auto &q : index.at(t).out){
+            if (!weight.defined(t, q) || weight(t, q) == k){
                 continue;
             }
             if (weight.defined(p, q) && weight(p, q) == weight(p, s) + weight(t, q) + d){
-                /*if (weight(p, s) + weight(t, q) + d <= 2
-                    && IntersectionIterator(graph[p].out.begin(), graph[p].out.end(),
-                                            graph[q].in.begin(), graph[q].in.end())
-                       != IntersectionIterator(graph[p].out.end(), graph[p].out.end(),
-                                               graph[q].in.end(), graph[q].in.end())) {
-                    weight(p, q) = 2;
-                    continue;
-                }*/
-                identified.insert(Edge(p, q));
                 weight.undefine(p, q);
+                if (IntersectionIterator(graph[p].out.begin(), graph[p].out.end(), graph[q].in.begin(), graph[q].in
+                        .end())
+                    != IntersectionIterator(graph[p].out.end(), graph[p].out.end(), graph[q].in.end(), graph[q].in
+                        .end())){
+                    weight.define(p, q, 2);
+                    continue;
+                }
+                identified.insert(Edge(p, q));
             }
         }
-    }
-
-    for (const auto &e : identified){
-        assert(!weight.defined(e.first, e.second));
     }
 }
 
 void DynamicKReach::remove_update(vertex_t s, vertex_t t, std::unordered_set<Edge, EdgeHash> &identified)
 {
     identified.erase(Edge(s, t));
-    if (IntersectionIterator(graph[s].out.begin(), graph[s].out.end(), graph[t].in.begin(), graph[t].in.end())
-        != IntersectionIterator(graph[s].out.end(), graph[s].out.end(), graph[t].in.end(), graph[t].in.end())){
-        weight(s, t) = 2;
 
-        assert(index[s].out.count(t) && weight.defined(s, t));
-
-        return;
-    }
-    IntersectionIterator begin(index[s].out.begin(), index[s].out.end(), index[t].in.begin(), index[t].in.end()),
-            end(index[s].out.end(), index[s].out.end(), index[t].in.end(), index[t].in.end());
+    const auto &ids = index[s].out, &idt = index[t].in;
+    IntersectionIterator begin(ids.begin(), ids.end(), idt.begin(), idt.end()),
+            end(ids.end(), ids.end(), idt.end(), idt.end());
     weight_t result_weight = k + 1;
     for (auto it = begin; it != end; ++it){
         if (identified.count(Edge(s, *it))){
@@ -185,11 +189,11 @@ void DynamicKReach::remove_update(vertex_t s, vertex_t t, std::unordered_set<Edg
         }
     }
     if (result_weight <= k){
-        weight(s, t) = result_weight;
+        weight.define(s, t, result_weight);
     }
     else {
         index.remove(s, t);
     }
 
-    assert((index[s].out.count(t) && weight.defined(s, t)) || (!index[s].out.count(t) && !weight.defined(s, t)));
+    assert((ids.count(t) && weight.defined(s, t)) || (!ids.count(t) && !weight.defined(s, t)));
 }

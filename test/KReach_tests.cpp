@@ -65,16 +65,16 @@ TEST_F(KReachTest, ReferenceIndexTest)
     index.insert(mapper.query(7), mapper.query(9));
 
     WeightFunction weight;
-    weight(mapper.query(2), mapper.query(2)) = 0;
-    weight(mapper.query(4), mapper.query(4)) = 0;
-    weight(mapper.query(7), mapper.query(7)) = 0;
-    weight(mapper.query(9), mapper.query(9)) = 0;
-    weight(mapper.query(2), mapper.query(4)) = 1;
-    weight(mapper.query(2), mapper.query(7)) = 3;
-    weight(mapper.query(4), mapper.query(2)) = 2;
-    weight(mapper.query(4), mapper.query(7)) = 2;
-    weight(mapper.query(4), mapper.query(9)) = 3;
-    weight(mapper.query(7), mapper.query(9)) = 1;
+    weight.define(mapper.query(2), mapper.query(2), 0);
+    weight.define(mapper.query(4), mapper.query(4), 0);
+    weight.define(mapper.query(7), mapper.query(7), 0);
+    weight.define(mapper.query(9), mapper.query(9), 0);
+    weight.define(mapper.query(2), mapper.query(4), 1);
+    weight.define(mapper.query(2), mapper.query(7), 3);
+    weight.define(mapper.query(4), mapper.query(2), 2);
+    weight.define(mapper.query(4), mapper.query(7), 2);
+    weight.define(mapper.query(4), mapper.query(9), 3);
+    weight.define(mapper.query(7), mapper.query(9), 1);
 
     ASSERT_EQ(graph, kr.graph);
     ASSERT_EQ(index, kr.index);

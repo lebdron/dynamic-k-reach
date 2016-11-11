@@ -4,8 +4,6 @@
 
 class DynamicKReach : public DynamicKReachBase
 {
-
-
     void insert_update(vertex_t s, vertex_t t, weight_t d);
 
     void remove_identify(vertex_t s, vertex_t t, weight_t d, std::unordered_set<Edge, EdgeHash> &identified);

@@ -25,8 +25,6 @@ void DynamicKReachBase::insert_edge(vertex_t s, vertex_t t)
     }
 
     graph.insert(s, t);
-
-    assert(graph[s].out.count(t));
 }
 
 void DynamicKReachBase::remove_edge(vertex_t s, vertex_t t)
