@@ -42,5 +42,5 @@ void AdjacencyList::clear()
 
 bool AdjacencyList::empty() const
 {
-    return !degree();
+    return degree() == 0;
 }

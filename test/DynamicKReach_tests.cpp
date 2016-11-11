@@ -177,13 +177,109 @@ TEST_F(DynamicKReachTest, RemovalStressTest)
     for (int i = 0; i < 100; ++i){
         std::cout << "Iteration: " << i << std::endl;
         size_t e = rand_edge();
-//        std::cout << "Random edge: " << edges[e].first << " " << edges[e].second << std::endl;
+        std::cout << "Random edge: " << edges[e].first << " " << edges[e].second << std::endl;
 
         dkr.remove_edge(edges[e].first, edges[e].second);
         dkrr.remove_edge(edges[e].first, edges[e].second);
 
         ASSERT_EQ(dkr.mapper, dkrr.mapper);
         ASSERT_EQ(dkr.graph, dkrr.graph);
+        for (const auto &v : dkr.index){
+//            std::cout << "Indexed vertex: " << v.first << std::endl;
+            ASSERT_EQ(dkr.index.at(v.first).out, dkrr.index.at(v.first).out);
+            ASSERT_EQ(dkr.index.at(v.first).in, dkrr.index.at(v.first).in);
+        }
+        ASSERT_EQ(dkr.weight, dkrr.weight);
+    }
+}
+
+TEST_F(DynamicKReachTest, VertexRemovalStressTest)
+{
+    std::vector<Edge> edges;
+    std::unordered_set<vertex_t> vertices;
+    {
+        std::ifstream fin("data/lastfm");
+        ASSERT_TRUE(fin.is_open());
+        for (vertex_t s, t; fin >> s >> t;) {
+            edges.push_back(Edge(s, t));
+            vertices.insert({s, t});
+        }
+    }
+
+    DynamicKReachReindex dkrr;
+    dkrr.construct_index(edges, 3);
+    DynamicKReach dkr;
+    dkr.construct_index(edges, 3);
+
+    auto rand_vertex = std::bind(std::uniform_int_distribution<size_t>(0, vertices.size() - 1),
+                               std::default_random_engine());
+
+    std::cout << std::endl;
+    for (int i = 0; i < 100; ++i){
+        std::cout << "Iteration: " << i << std::endl;
+        size_t vtx = rand_vertex();
+
+        auto it = vertices.begin();
+        std::advance(it, vtx);
+
+        std::cout << "Random vertex: " << *it << std::endl;
+
+        dkr.remove_vertex(*it);
+        dkrr.remove_vertex(*it);
+
+        ASSERT_EQ(dkr.mapper, dkrr.mapper);
+        ASSERT_EQ(dkr.graph, dkrr.graph);
+        ASSERT_EQ(dkr.index, dkrr.index);
+        for (const auto &v : dkr.index){
+//            std::cout << "Indexed vertex: " << v.first << std::endl;
+            ASSERT_EQ(dkr.index.at(v.first).out, dkrr.index.at(v.first).out);
+            ASSERT_EQ(dkr.index.at(v.first).in, dkrr.index.at(v.first).in);
+        }
+        ASSERT_EQ(dkr.weight, dkrr.weight);
+    }
+}
+
+TEST_F(DynamicKReachTest, InsertStressTest)
+{
+    std::vector<Edge> edges;
+    std::unordered_set<vertex_t> vertices;
+    {
+        std::ifstream fin("data/lastfm");
+        ASSERT_TRUE(fin.is_open());
+        for (vertex_t s, t; fin >> s >> t;) {
+            edges.push_back(Edge(s, t));
+            vertices.insert({s, t});
+        }
+    }
+
+    DynamicKReachReindex dkrr;
+    dkrr.construct_index(edges, 3);
+    DynamicKReach dkr;
+    dkr.construct_index(edges, 3);
+
+    auto rand_vertex = std::bind(std::uniform_int_distribution<size_t>(0, vertices.size() - 1),
+                                 std::default_random_engine());
+
+    std::cout << std::endl;
+    for (int i = 0; i < 100; ++i){
+        std::cout << "Iteration: " << i << std::endl;
+        size_t vtx = rand_vertex();
+        size_t vtx2 = rand_vertex();
+
+        auto it = vertices.begin();
+        std::advance(it, vtx);
+
+        auto it2 = vertices.begin();
+        std::advance(it, vtx2);
+
+        std::cout << "Random pair of vertices: " << *it << " " << *it2 << std::endl;
+
+        dkr.insert_edge(*it ,*it2);
+        dkrr.insert_edge(*it, *it2);
+
+        ASSERT_EQ(dkr.mapper, dkrr.mapper);
+        ASSERT_EQ(dkr.graph, dkrr.graph);
+        ASSERT_EQ(dkr.index, dkrr.index);
         for (const auto &v : dkr.index){
 //            std::cout << "Indexed vertex: " << v.first << std::endl;
             ASSERT_EQ(dkr.index.at(v.first).out, dkrr.index.at(v.first).out);

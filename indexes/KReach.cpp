@@ -72,7 +72,7 @@ void KReach::generate_cover()
 
 void KReach::bfs(vertex_t s)
 {
-    assert(index.at(s).empty());
+    assert(index.at(s).out.empty());
 
     unordered_set<vertex_t> visited;
     queue<vertex_t> frontier;

@@ -51,7 +51,12 @@ void DynamicKReachBase::remove_vertex(vertex_t v)
 
     v = mapper.query(v);
 
-    //TODO implement
+    for (const auto &p : graph.at(v).in){
+        graph.at(p).out.erase(v);
+    }
+    for (const auto &q : graph.at(v).out){
+        graph.at(q).in.erase(v);
+    }
 }
 
 DynamicKReachBase::~DynamicKReachBase()

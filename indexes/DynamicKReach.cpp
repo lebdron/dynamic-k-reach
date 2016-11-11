@@ -1,14 +1,18 @@
 #include <IntersectionIterator.h>
-#include <iostream>
 #include "DynamicKReach.h"
-// TODO remove iostream
 
 using namespace std;
 
 void DynamicKReach::insert_update(vertex_t s, vertex_t t, weight_t d)
 {
     for (const auto &p: index[s].in) {
+        if (weight(p, s) == k){
+            continue;
+        }
         for (const auto &q : index[t].out) {
+            if (weight(t, q) == k){
+                continue;
+            }
             if (weight.defined(p, q) && weight(p, s) + weight(t, q) + d < weight(p, q)) {
                 weight.undefine(p, q);
                 weight.define(p, q, weight(p, s) + weight(t, q) + d);
@@ -112,9 +116,6 @@ void DynamicKReach::remove_edge(vertex_t s, vertex_t t)
     }
 
     for (const auto &e : identified){
-        if (weight.defined(e.first, e.second)){
-            std::cout << e.first << " " << e.second << std::endl;
-        }
         assert(!weight.defined(e.first, e.second));
     }
 
@@ -139,6 +140,70 @@ void DynamicKReach::remove_edge(vertex_t s, vertex_t t)
 void DynamicKReach::remove_vertex(vertex_t v)
 {
     DynamicKReachBase::remove_vertex(v);
+
+    for (const auto &u : index){
+        for (const auto &s : u.second.out){
+            assert(weight.defined(u.first, s));
+        }
+        for (const auto &s : u.second.in){
+            assert(weight.defined(s, u.first));
+        }
+    }
+    for (const auto &p : weight){
+        assert(index.at(p.first.first).out.count(p.first.second));
+    }
+
+    vertex_t old_v = v;
+    v = mapper.query(v);
+    mapper.remove(old_v);
+
+    unordered_set<Edge, EdgeHash> identified;
+
+    if (index.count(v)){
+        index.remove(v, v);
+        weight.undefine(v, v);
+        remove_identify(v, v, 0, identified);
+        for (const auto &p : index.at(v).in){
+            index.at(p).out.erase(v);
+            weight.undefine(p, v);
+        }
+        for (const auto &q : index.at(v).out){
+            index.at(q).in.erase(v);
+            weight.undefine(v, q);
+        }
+        index.erase(v);
+    }
+    else {
+        for (const auto &p : graph.at(v).in){
+            for (const auto &q : graph.at(v).out){
+                if (graph.has(p, q) || IntersectionIterator(graph.at(p).out.begin(), graph.at(p).out.end(), graph.at(q)
+                        .in.begin(), graph.at(q).in.end()) != IntersectionIterator(graph.at(p).out.end(), graph.at(p).out
+                        .end(), graph.at(q).in.end(), graph.at(q).in.end())){
+                    continue;
+                }
+                remove_identify(p, q, 2, identified);
+            }
+        }
+    }
+
+    graph.at(v).clear();
+
+    while (!identified.empty()){
+        Edge e = *identified.begin();
+        remove_update(e.first, e.second, identified);
+    }
+
+    for (const auto &u : index){
+        for (const auto &s : u.second.out){
+            assert(weight.defined(u.first, s));
+        }
+        for (const auto &s : u.second.in){
+            assert(weight.defined(s, u.first));
+        }
+    }
+    for (const auto &p : weight){
+        assert(index.at(p.first.first).out.count(p.first.second));
+    }
 }
 
 void DynamicKReach::remove_identify(vertex_t s, vertex_t t, weight_t d, std::unordered_set<Edge, EdgeHash> &identified)
@@ -180,6 +245,10 @@ void DynamicKReach::remove_update(vertex_t s, vertex_t t, std::unordered_set<Edg
         }
         if (identified.count(Edge(*it, t))){
             remove_update(*it, t, identified);
+        }
+        if (!ids.count(*it) || !idt.count(*it)){
+            it = IntersectionIterator(ids.begin(), ids.end(), idt.begin(), idt.end());
+            continue;
         }
         if (!weight.defined(s, *it) || !weight.defined(*it, t)){
             continue;

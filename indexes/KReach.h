@@ -34,6 +34,10 @@ protected:
 
     FRIEND_TEST(DynamicKReachTest, RemovalStressTest);
 
+    FRIEND_TEST(DynamicKReachTest, VertexRemovalStressTest);
+
+    FRIEND_TEST(DynamicKReachTest, InsertStressTest);
+
 public:
     void construct_index(std::vector<Edge> edges, weight_t k);
 

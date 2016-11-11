@@ -25,7 +25,25 @@ void DynamicKReachReindex::remove_edge(vertex_t s, vertex_t t)
 void DynamicKReachReindex::remove_vertex(vertex_t v)
 {
     DynamicKReachBase::remove_vertex(v);
-    // TODO implement
+
+    vertex_t old_v = v;
+    v = mapper.query(v);
+    mapper.remove(old_v);
+
+    if (index.count(v)){
+        for (const auto &p : index.at(v).in){
+            index.at(p).out.erase(v);
+        }
+        for (const auto &q : index.at(v).out){
+            index.at(q).in.erase(v);
+        }
+        index.erase(v);
+    }
+
+    graph.at(v).clear();
+
+    clear_index();
+    generate_index();
 }
 
 void DynamicKReachReindex::clear_index()
