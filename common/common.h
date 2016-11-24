@@ -1,5 +1,7 @@
 #pragma once
 
+#define NDEBUG
+
 #include <cstdint>
 #include <cstddef>
 #include <cassert>

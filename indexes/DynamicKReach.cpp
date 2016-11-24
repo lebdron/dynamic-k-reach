@@ -72,17 +72,17 @@ void DynamicKReach::remove_edge(vertex_t s, vertex_t t)
 {
     DynamicKReachBase::remove_edge(s, t);
 
-    for (const auto &u : index){
-        for (const auto &v : u.second.out){
-            assert(weight.defined(u.first, v));
-        }
-        for (const auto &v : u.second.in){
-            assert(weight.defined(v, u.first));
-        }
-    }
-    for (const auto &p : weight){
-        assert(index.at(p.first.first).out.count(p.first.second));
-    }
+//    for (const auto &u : index){
+//        for (const auto &v : u.second.out){
+//            assert(weight.defined(u.first, v));
+//        }
+//        for (const auto &v : u.second.in){
+//            assert(weight.defined(v, u.first));
+//        }
+//    }
+//    for (const auto &p : weight){
+//        assert(index.at(p.first.first).out.count(p.first.second));
+//    }
 
     s = mapper.query(s);
     t = mapper.query(t);
@@ -115,43 +115,43 @@ void DynamicKReach::remove_edge(vertex_t s, vertex_t t)
         }
     }
 
-    for (const auto &e : identified){
-        assert(!weight.defined(e.first, e.second));
-    }
+//    for (const auto &e : identified){
+//        assert(!weight.defined(e.first, e.second));
+//    }
 
     while (!identified.empty()){
         Edge e = *identified.begin();
         remove_update(e.first, e.second, identified);
     }
 
-    for (const auto &u : index){
-        for (const auto &v : u.second.out){
-            assert(weight.defined(u.first, v));
-        }
-        for (const auto &v : u.second.in){
-            assert(weight.defined(v, u.first));
-        }
-    }
-    for (const auto &p : weight){
-        assert(index.at(p.first.first).out.count(p.first.second));
-    }
+//    for (const auto &u : index){
+//        for (const auto &v : u.second.out){
+//            assert(weight.defined(u.first, v));
+//        }
+//        for (const auto &v : u.second.in){
+//            assert(weight.defined(v, u.first));
+//        }
+//    }
+//    for (const auto &p : weight){
+//        assert(index.at(p.first.first).out.count(p.first.second));
+//    }
 }
 
 void DynamicKReach::remove_vertex(vertex_t v)
 {
     DynamicKReachBase::remove_vertex(v);
 
-    for (const auto &u : index){
-        for (const auto &s : u.second.out){
-            assert(weight.defined(u.first, s));
-        }
-        for (const auto &s : u.second.in){
-            assert(weight.defined(s, u.first));
-        }
-    }
-    for (const auto &p : weight){
-        assert(index.at(p.first.first).out.count(p.first.second));
-    }
+//    for (const auto &u : index){
+//        for (const auto &s : u.second.out){
+//            assert(weight.defined(u.first, s));
+//        }
+//        for (const auto &s : u.second.in){
+//            assert(weight.defined(s, u.first));
+//        }
+//    }
+//    for (const auto &p : weight){
+//        assert(index.at(p.first.first).out.count(p.first.second));
+//    }
 
     vertex_t old_v = v;
     v = mapper.query(v);
@@ -193,17 +193,17 @@ void DynamicKReach::remove_vertex(vertex_t v)
         remove_update(e.first, e.second, identified);
     }
 
-    for (const auto &u : index){
-        for (const auto &s : u.second.out){
-            assert(weight.defined(u.first, s));
-        }
-        for (const auto &s : u.second.in){
-            assert(weight.defined(s, u.first));
-        }
-    }
-    for (const auto &p : weight){
-        assert(index.at(p.first.first).out.count(p.first.second));
-    }
+//    for (const auto &u : index){
+//        for (const auto &s : u.second.out){
+//            assert(weight.defined(u.first, s));
+//        }
+//        for (const auto &s : u.second.in){
+//            assert(weight.defined(s, u.first));
+//        }
+//    }
+//    for (const auto &p : weight){
+//        assert(index.at(p.first.first).out.count(p.first.second));
+//    }
 }
 
 void DynamicKReach::remove_identify(vertex_t s, vertex_t t, weight_t d, std::unordered_set<Edge, EdgeHash> &identified)
