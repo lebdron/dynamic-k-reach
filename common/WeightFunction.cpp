@@ -1,36 +1,37 @@
 #include "WeightFunction.h"
 
-void WeightFunction::define(vertex_t s, vertex_t t, weight_t d)
-{
-    assert(!defined(s, t));
-
-    insert(make_pair(Edge(s, t), d));
+Weight &WeightFunction::operator()(Vertex s, Vertex t) {
+    return map_[Edge(s, t)];
 }
 
-const weight_t &WeightFunction::operator()(vertex_t s, vertex_t t) const
-{
-    assert(defined(s, t));
-
-    return at(Edge(s, t));
+WeightFunction::const_iterator WeightFunction::find(Vertex s, Vertex t) const{
+    return map_.find(Edge(s, t));
 }
 
-bool WeightFunction::defined(vertex_t s, vertex_t t) const
-{
-    return count(Edge(s, t)) != 0;
+WeightFunction::iterator WeightFunction::undefine(WeightFunction::iterator it) {
+    return map_.erase(it);
 }
 
-void WeightFunction::undefine(vertex_t s, vertex_t t)
-{
-    assert(defined(s, t));
-
-    erase(Edge(s, t));
-
-    assert(!defined(s, t));
+bool WeightFunction::defined(WeightFunction::iterator it) const {
+    return it != map_.end();
 }
 
-void WeightFunction::update(vertex_t s, vertex_t t, weight_t d)
-{
-    assert(defined(s, t));
+void WeightFunction::clear() {
+    map_.clear();
+}
 
-    operator[](Edge(s, t)) = d;
+bool WeightFunction::defined(WeightFunction::const_iterator it) const {
+    return it != map_.end();
+}
+
+const Weight &WeightFunction::operator()(Vertex s, Vertex t) const {
+    return map_.at(Edge(s, t));
+}
+
+WeightFunction::iterator WeightFunction::find(Vertex s, Vertex t) {
+    return map_.find(Edge(s, t));
+}
+
+bool WeightFunction::operator==(const WeightFunction &w) const {
+    return map_ == w.map_;
 }

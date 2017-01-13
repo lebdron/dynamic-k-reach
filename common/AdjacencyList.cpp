@@ -1,46 +1,41 @@
 #include "AdjacencyList.h"
 
-AdjacencyList::Iterator AdjacencyList::begin()
-{
-    return Iterator(out.begin(), out.end(), in.begin(), in.end());
+AdjacencyList::iterator AdjacencyList::insert(Vertex v) {
+    return set_.insert(v).first;
 }
 
-AdjacencyList::Iterator AdjacencyList::end()
-{
-    return Iterator(out.end(), out.end(), in.end(), in.end());
+AdjacencyList::iterator AdjacencyList::remove(Vertex v) {
+    auto it = set_.find(v);
+    if (it == set_.end()){
+        return it;
+    }
+    return set_.erase(it);
 }
 
-AdjacencyList::ConstIterator AdjacencyList::begin() const
-{
-    return ConstIterator(out.begin(), out.end(), in.begin(), in.end());
+AdjacencyList::size_type AdjacencyList::size() const {
+    return set_.size();
 }
 
-AdjacencyList::ConstIterator AdjacencyList::end() const
-{
-    return ConstIterator(out.end(), out.end(), in.end(), in.end());
+void AdjacencyList::clear() {
+    set_.clear();
 }
 
-bool AdjacencyList::operator==(const AdjacencyList &adj) const {
-    return out == adj.out && in == adj.in;
+AdjacencyList::const_iterator AdjacencyList::begin() const {
+    return set_.begin();
 }
 
-bool AdjacencyList::operator!=(const AdjacencyList &adj) const
-{
-    return !(*this == adj);
+AdjacencyList::const_iterator AdjacencyList::end() const {
+    return set_.end();
 }
 
-size_t AdjacencyList::degree() const
-{
-    return out.size() + in.size();
+bool AdjacencyList::operator==(const AdjacencyList &l) const {
+    return set_ == l.set_;
 }
 
-void AdjacencyList::clear()
-{
-    out.clear();
-    in.clear();
+bool AdjacencyList::empty() const {
+    return set_.empty();
 }
 
-bool AdjacencyList::empty() const
-{
-    return degree() == 0;
+bool AdjacencyList::contains(Vertex v) const {
+    return set_.find(v) != set_.end();
 }

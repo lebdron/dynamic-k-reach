@@ -1,31 +1,21 @@
 #pragma once
 
 #include "common.h"
-#include "UnionIterator.h"
 
-class AdjacencyList
-{
+class AdjacencyList {
+    using base = std::set<Vertex>;
+    base set_;
 public:
-    typedef UnionIterator Iterator;
-    typedef UnionIterator ConstIterator;
-
-    Adjacent out, in;
-
-    Iterator begin();
-
-    Iterator end();
-
-    ConstIterator begin() const;
-
-    ConstIterator end() const;
-
-    bool operator==(const AdjacencyList &adj) const;
-
-    bool operator!=(const AdjacencyList &adj) const;
-
-    size_t degree() const;
-
+    using iterator = base::iterator;
+    using const_iterator = base::const_iterator;
+    using size_type = std::size_t;
+    iterator insert(Vertex v);
+    iterator remove(Vertex v);
+    const_iterator begin() const;
+    const_iterator end() const;
+    size_type size() const;
     void clear();
-
+    bool operator==(const AdjacencyList &l) const;
     bool empty() const;
+    bool contains(Vertex v) const;
 };

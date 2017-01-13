@@ -1,24 +1,20 @@
 #pragma once
 
+#include <unordered_map>
+#include <unordered_set>
 #include "common.h"
 
-class Mapper
-{
-    std::unordered_map<vertex_t, vertex_t> mapping;
-    std::unordered_set<vertex_t> free;
-
+class Mapper{
+    std::unordered_map<Vertex, Vertex> map_;
+    std::unordered_set<Vertex> set_;
 public:
-    vertex_t insert(vertex_t v);
-
-    bool present(vertex_t v) const;
-
-    vertex_t query(vertex_t v) const;
-
-    void remove(vertex_t v);
-
+    using size_type = std::size_t;
+    Vertex operator[](Vertex v);
+    Vertex operator()(Vertex v) const;
+    void remove(Vertex v);
+    bool empty() const;
+    size_type size() const;
+    bool present(Vertex v) const;
+    bool operator==(const Mapper &m) const;
     void clear();
-
-    size_t size() const;
-
-    bool operator==(const Mapper &mapper) const;
 };

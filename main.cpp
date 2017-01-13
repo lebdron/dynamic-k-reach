@@ -1,140 +1,45 @@
 #include <iostream>
+#include <vector>
+#include <common.h>
 #include <fstream>
-#include <random>
-#include <functional>
-#include <sys/time.h>
 #include <KReach.h>
-#include <DynamicKReachReindex.h>
 #include <DynamicKReach.h>
 
-using namespace std;
+using std::vector;
+using std::string;
+using std::ifstream;
+using std::cout;
+using std::endl;
+using std::flush;
 
-
-int main()
-{
-
-
-
-    /*dynamic_k_reach_v2 dkr1, dkr2;
-    dkr1.construct_index(edges, 3);
-    cout << "Constructed 1" << endl;
-    dkr2.construct_index(edges, 3);
-    cout << "Constructed 2" << endl;
-
-    {
-        cout << "Before removal:" << endl;
-        auto out_1 = dkr1.getOut_index(), out_2 = dkr2.getOut_index(), in_1 = dkr1.getIn_index(), in_2 = dkr2.getIn_index();
-        cout << "out1 == out2: " << (out_1 == out_2) << endl;
-        cout << "in1 == in2: " << (in_1 == in_2) << endl;
+vector<Edge> read_graph(string filename){
+    vector<Edge> edges;
+    ifstream fin("data/" + filename);
+    assert(fin.is_open());
+    for (Vertex s, t; fin >> s >> t;){
+        edges.push_back(Edge(s, t));
     }
+    return edges;
+}
 
-    auto rand_vtx = bind(uniform_int_distribution<vertex_t>(0, max_id), default_random_engine());
-
-    for (uint8_t i = 0; i < 100; ++i) {
-        vertex_t v = rand_vtx();
-        if (!dkr2.mapping.count(v)){
-            --i;
-            continue;
-        }
-        cout << "Random vertex: " << v << endl;
-
-        double ins = -GetCurrentTimeSec();
-        dkr1.remove_vertex(v);
-//        dkr1.remove_vertex_edges(v);
-        ins += GetCurrentTimeSec();
-        cout << "Removed 1 in " << ins << endl;
-        double ins_rei = -GetCurrentTimeSec();
-        dkr2.remove_vertex_reindex(v);
-        ins_rei += GetCurrentTimeSec();
-        cout << "Removed 2 in " << ins_rei << endl;
-        cout << "Speedup: " << ins_rei / ins << endl;
-
-        {
-            cout << "After removal:" << endl;
-            auto out_1 = dkr1.getOut_index(), out_2 = dkr2.getOut_index(), in_1 = dkr1.getIn_index(), in_2 = dkr2.getIn_index();
-            bool out = out_1 == out_2, in = in_1 == in_2;
-            bool onei = dkr1.out_neighbors == dkr2.out_neighbors, inei = dkr1.in_neighbors == dkr2.in_neighbors;
-            cout << "out1 == out2: " << out << endl;
-            cout << "in1 == in2: " << in << endl;
-            cout << "onei1 == onei2: " << onei << endl;
-            cout << "inei1 == inei2: " << inei << endl;
-            if (!out || !in || !onei || !inei){
-                cout << "ERROR" << endl;
-
-
-                auto outm = mismatch(out_1.begin(), out_1.end(), out_2.begin()), inm = mismatch(in_1.begin(), in_1.end(), in_2.begin());
-                auto out1v = *outm.first, out2v = *outm.second, in1v = *inm.first, in2v = *inm.second;
-                auto out1vtx = outm.first - out_1.begin(), out2vtx = outm.second - out_2.begin(),
-                        in1vtx = inm.first - in_1.begin(), in2vtx = inm.second - in_2.begin();
-
-                auto outvm = mismatch(out1v.begin(), out1v.end(), out2v.begin()), invm = mismatch(in1v.begin(), in1v.end(), in2v.begin());
-                auto out1mis = *outvm.first, out2mis = *outvm.second, in1mis = *invm.first, in2mis = *invm.second;
-                auto out1id = outvm.first - out1v.begin(), out2id = outvm.second - out2v.begin(),
-                        in1id = invm.first - in1v.begin(), in2id = invm.second - in2v.begin();
-                break; // 231 -3> 352 missing
-            }
-        }
-    }*/
-
-
-
-    /*auto rand_vtx = bind(uniform_int_distribution<vertex_t>(0, max_id), default_random_engine());
-
-    for (uint8_t i = 0; i < 100; ++i) {
-        vertex_t s = rand_vtx(), t = rand_vtx();
-        cout << "Random edge: " << s << " " << t << endl;
-        double ins = -GetCurrentTimeSec();
-        dkr1.insert_edge(s, t);
-        ins += GetCurrentTimeSec();
-        cout << "Inserted 1 in " << ins << endl;
-        double ins_rei = -GetCurrentTimeSec();
-        dkr2.insert_edge_reindex(s, t);
-        ins_rei += GetCurrentTimeSec();
-        cout << "Inserted 2 in " << ins_rei << endl;
-        cout << "Speedup: " << ins_rei / ins << endl;
-
-        {
-            cout << "After insertion:" << endl;
-            auto out_1 = dkr1.getOut_index(), out_2 = dkr2.getOut_index(), in_1 = dkr1.getIn_index(), in_2 = dkr2.getIn_index();
-            bool out = out_1 == out_2, in = in_1 == in_2;
-            cout << "out1 == out2: " << out << endl;
-            cout << "in1 == in2: " << in << endl;
-            if (!out || !in){
-                cout << "ERROR" << endl;
-                break;
-            }
-        }
-    }*/
-//    cout << "Index constructed" << endl;
-
-    /*{
-        ifstream fin("dels_e");
-        vertex_t s, t;
-        while (fin >> s >> t){
-            dkr.remove_edge(s, t);
-            cout << "Edge removed" << endl;
-        }
-        fin.close();
-    }*/
-
-    /*{
-        ifstream fin("dels_v_er");
-        vertex_t v;
-        while (fin >> v){
-            dkr.remove_vertex(v);
-            cout << "Vertex removed" << endl;
-        }
-        fin.close();
+int main() {
+    string filename = "lastfm";
+    auto graph = read_graph(filename);
+    cout << "m=" << graph.size() << endl;
+    KReach kReach;
+    DynamicKReach dynamicKReach;
+    kReach.construct_index(graph, 3);
+//    dynamicKReach.construct_index(graph, 3);
+    dynamicKReach = kReach;
+    TEST_equals(kReach, dynamicKReach);
+    for (const auto &e : graph){
+        cout << e.first << " " << e.second << endl;
+        kReach.remove_edge(e.first, e.second);
+        dynamicKReach.remove_edge(e.first, e.second);
+        TEST_equals(kReach, dynamicKReach);
+        kReach.insert_edge(e.first, e.second);
+        dynamicKReach.insert_edge(e.first, e.second);
+        TEST_equals(kReach, dynamicKReach);
     }
-
-    {
-        ifstream fin("queries_er");
-        vertex_t s, t;
-        while (fin >> s >> t){
-            cout << s << " " << t << ": " << dkr.query_reachability(s, t) << endl;
-        }
-        fin.close();
-    }*/
-
     return 0;
 }

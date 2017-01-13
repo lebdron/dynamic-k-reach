@@ -1,21 +1,31 @@
 cmake_minimum_required(VERSION 3.6)
-project(DynamicKReachability)
+project(dynamic_k_reach)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wpedantic -Wextra -Werror")
+set(CMAKE_CXX_STANDARD 14)
 
-find_package(Boost)
+set(BOOST_ROOT "/opt/boost/boost_1_63_0")
+set(Boost_NO_BOOST_CMAKE ON)
+find_package(Boost 1.63.0)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
-set(SOURCE_FILES main.cpp)
-add_executable(main ${SOURCE_FILES})
-
+add_library(common
+        common/common.h
+        common/Mapper.cpp common/Mapper.h
+        common/WeightFunction.cpp common/WeightFunction.h
+        common/AdjacencyList.cpp common/AdjacencyList.h
+        common/Iterator.cpp common/Iterator.h
+        common/Graph.cpp common/Graph.h)
 include_directories(common)
-include_directories(indexes)
 
-add_subdirectory(common)
-add_subdirectory(indexes)
-add_subdirectory(test)
+add_library(index
+        index/KReach.cpp index/KReach.h index/DynamicKReach.cpp index/DynamicKReach.h)
+include_directories(index)
 
-target_link_libraries(main indexes common)
+set(SOURCE_FILES main.cpp)
+add_executable(dynamic_k_reach ${SOURCE_FILES})
+
+target_link_libraries(index common)
+target_link_libraries(dynamic_k_reach index common)
+target_compile_options(dynamic_k_reach PRIVATE -Wall -Wextra -Wpedantic)

@@ -1,17 +1,21 @@
 #pragma once
 
+#include <unordered_map>
 #include "common.h"
 
-class WeightFunction : public std::unordered_map<Edge, weight_t, EdgeHash>
-{
+class WeightFunction {
+    using base = std::unordered_map<Edge, Weight, EdgeHash>;
+    base map_;
+    using iterator = base::iterator;
+    using const_iterator = base::const_iterator;
 public:
-    void define(vertex_t s, vertex_t t, weight_t d);
-
-    const weight_t &operator()(vertex_t s, vertex_t t) const;
-
-    bool defined(vertex_t s, vertex_t t) const;
-
-    void undefine(vertex_t s, vertex_t t);
-
-    void update(vertex_t s, vertex_t t, weight_t d);
+    Weight& operator()(Vertex s, Vertex t);
+    const Weight& operator()(Vertex s, Vertex t) const;
+    iterator find(Vertex s, Vertex t);
+    const_iterator find(Vertex s, Vertex t) const;
+    iterator undefine(iterator it);
+    bool defined(iterator it) const;
+    bool defined(const_iterator it) const;
+    void clear();
+    bool operator==(const WeightFunction &w) const;
 };

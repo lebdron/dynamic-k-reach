@@ -1,62 +1,52 @@
 #include "Mapper.h"
 
-vertex_t Mapper::insert(vertex_t v)
-{
-    assert(!mapping.count(v));
+using std::make_pair;
 
-    vertex_t id;
-    if (free.empty()){
-        id = mapping.size();
+Vertex Mapper::operator[](Vertex v) {
+    Vertex id;
+    if (set_.empty()){
+        id = (Vertex) map_.size();
     }
-    else {
-        auto it = free.begin();
+    else{
+        auto it = set_.begin();
         id = *it;
-        free.erase(it);
+        set_.erase(it);
     }
-    mapping[v] = id;
-
-    assert(mapping.count(v));
-    assert(!free.count(id));
-
+    map_.insert(make_pair(v, id));
     return id;
 }
 
-bool Mapper::present(vertex_t v) const
-{
-    return mapping.count(v) != 0;
+Vertex Mapper::operator()(Vertex v) const {
+    return map_.at(v);
 }
 
-vertex_t Mapper::query(vertex_t v) const
-{
-    assert(mapping.count(v));
-
-    return mapping.at(v);
+void Mapper::remove(Vertex v) {
+    auto it = map_.find(v);
+    if (it == map_.end()){
+        return;
+    }
+    Vertex id = it->second;
+    set_.insert(id);
+    map_.erase(it);
 }
 
-void Mapper::remove(vertex_t v)
-{
-    assert(mapping.count(v));
-
-    auto it = mapping.find(v);
-    vertex_t id = it->second;
-    free.insert(id);
-    mapping.erase(it);
-
-    assert(!mapping.count(v));
-    assert(free.count(id));
+bool Mapper::empty() const {
+    return map_.empty();
 }
 
-void Mapper::clear()
-{
-    mapping.clear();
-    free.clear();
+Mapper::size_type Mapper::size() const {
+    return map_.size();
 }
 
-size_t Mapper::size() const {
-    return mapping.size() + free.size();
+bool Mapper::present(Vertex v) const {
+    return map_.find(v) != map_.end();
 }
 
-bool Mapper::operator==(const Mapper &mapper) const {
-    return mapping == mapper.mapping && free == mapper.free;
+void Mapper::clear() {
+    map_.clear();
+    set_.clear();
 }
 
+bool Mapper::operator==(const Mapper &m) const {
+    return map_ == m.map_ && set_ == m.set_;
+}
