@@ -52,7 +52,7 @@ void DynamicKReach::remove_update() {
         Weight result = k + 1;
         const auto &sout = index.out(s), &tin = index.in(t);
         ExclusiveIntersection begin(s, sout.begin(), sout.end(), t, tin.begin(), tin.end()),
-                end(s, sout.end(), sout.end(), t, tin.end(), tin.end()); // TODO pop iterators
+                end(s, sout.end(), sout.end(), t, tin.end(), tin.end());
         for (; begin != end; ++begin){
             Vertex w = *begin;
             auto sw = identified.find(Edge(s, w));
@@ -82,7 +82,7 @@ void DynamicKReach::remove_update() {
             st->second = result;
         }
         else{
-            index.remove(s, t); // TODO modify stack top
+            index.remove(s, t);
             weight.undefine(st);
         }
         processing.erase(Edge(s, t));
@@ -109,7 +109,7 @@ void DynamicKReach::insert_edge(Vertex s, Vertex t) {
         for (const auto &w : graph.out(v)){
             for (const auto &q : index.out(w)){
                 auto weight_wq = weight(w, q);
-                auto it = weight.find(v, q); // TODO compare vertex set and hash map performance
+                auto it = weight.find(v, q);
                 if (!weight.defined(it) && weight_wq + 1 <= k){
                     index.insert(v, q);
                     weight(v, q) = weight_wq + 1;
@@ -233,4 +233,58 @@ DynamicKReach::DynamicKReach(const KReach &i) : KReach(i) {
 DynamicKReach &DynamicKReach::operator=(KReach i) {
     KReach::operator=(i);
     return *this;
+}
+
+void DynamicKReach::remove_vertex_edges(Vertex v) {
+    if (!mapper.present(v)){
+        return;
+    }
+    Vertex v_old = v;
+    v = mapper(v);
+    while (!graph.in(v).empty()){
+        Vertex u = *graph.in(v).begin();
+        graph.remove(u, v);
+        if (index.contains(u) && index.contains(v)){
+            remove_identify(u, v, 1);
+        }
+        else if (index.contains(u)){
+            for (const auto &w : graph.out(v)){
+                remove_identify(u, w, 2);
+            }
+        }
+        else {
+            for (const auto &w : graph.in(u)){
+                remove_identify(w, v, 2);
+            }
+        }
+        while (!identified.empty()){
+            remove_update();
+        }
+    }
+    while (!graph.out(v).empty()){
+        Vertex u = *graph.out(v).begin();
+        graph.remove(v, u);
+        if (index.contains(v) && index.contains(u)){
+            remove_identify(v, u, 1);
+        }
+        else if (index.contains(v)){
+            for (const auto &w : graph.out(u)){
+                remove_identify(v, w, 2);
+            }
+        }
+        else {
+            for (const auto &w : graph.in(v)){
+                remove_identify(w, u, 2);
+            }
+        }
+        while (!identified.empty()){
+            remove_update();
+        }
+    }
+    if (index.contains(v)) {
+        index.remove(v);
+        weight.undefine(weight.find(v, v));
+    }
+    graph(v).clear();
+    mapper.remove(v_old);
 }

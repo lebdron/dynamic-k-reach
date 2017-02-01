@@ -17,4 +17,5 @@ public:
     void insert_edge(Vertex s, Vertex t);
     void remove_edge(Vertex s, Vertex t);
     void remove_vertex(Vertex v);
+    void remove_vertex_edges(Vertex v);
 };
