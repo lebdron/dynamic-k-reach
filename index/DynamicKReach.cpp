@@ -1,290 +1,394 @@
-#include <stack>
 #include "DynamicKReach.h"
 
-using std::stack;
+using namespace std;
 
-void DynamicKReach::insert_update(Vertex s, Vertex t, Weight d) {
-    for(const auto &p : index.in(s)){
-        auto weight_ps = weight(p, s);
-        for(const auto &q : index.out(t)){
-            auto weight_tq = weight(t, q);
-            auto pq = weight.find(p, q);
-            if (!weight.defined(pq) && weight_ps + weight_tq + d <= k){
-                index.insert(p, q);
-                weight(p, q) = weight_ps + weight_tq + d;
-            }
-            else if (weight.defined(pq) && weight_ps + weight_tq + d < pq->second){
-                pq->second = weight_ps + weight_tq + d;
-            }
+DynamicKReach::DynamicKReach(const Graph &graph, distance_t k)
+        : graph_(graph), k_(k), degree_(graph.num_vertices()), queue_(graph.num_vertices()){
+    vector<pair<degree_t, vertex_t>> quedeg_temp_;
+    quedeg_temp_.reserve(graph.num_vertices());
+    DegreeQueue(less<pair<degree_t, vertex_t>>(), move(quedeg_temp_)).swap(quedeg_);
+    updated_.reserve(graph.num_vertices());
+    vector<pair<distance_t, vertex_t>> quedist_temp_;
+    quedist_temp_.reserve(graph.num_vertices());
+    DistanceQueue(greater<pair<distance_t, vertex_t>>(), move(quedist_temp_)).swap(quedist_);
+}
+
+void DynamicKReach::construct() {
+    index_.clear();
+    set_degree();
+    for (vertex_t i = 0; i < graph_.num_vertices(); ++i){
+        quedeg_.emplace(degree_.at(i), i);
+    }
+    while (!quedeg_.empty()){
+        auto deg = quedeg_.top().first;
+        auto cur = quedeg_.top().second;
+        quedeg_.pop();
+        if (deg <= 0 || degree_.at(cur) <= 0) {
+            continue;
         }
+        if (deg != degree_.at(cur)) {
+            quedeg_.emplace(degree_.at(cur), cur);
+            continue;
+        }
+        index_[cur] = vector<distance_t>(graph_.num_vertices(), INF8);
+        construct_bfs(cur, index_.at(cur));
+        cover(cur);
     }
 }
 
-void DynamicKReach::remove_identify(Vertex s, Vertex t, Weight d) {
-    for (const auto &p : index.in(s)){
-        auto weight_ps = weight(p, s);
-        for (const auto &q : index.out(t)){
-            auto weight_tq = weight(t, q);
-            auto pq = weight.find(p, q);
-            if (weight.defined(pq) && weight_ps + weight_tq + d == pq->second){
-                const auto &pout = graph.out(p), &qin = graph.in(q);
-                InclusiveIntersection begin(pout.begin(), pout.end(), qin.begin(), qin.end()),
-                        end(pout.end(), pout.end(), qin.end(), qin.end());
-                if (begin != end) {
-                    pq->second = 2;
-                    continue;
-                }
-                identified.insert(Edge(p, q));
+bool DynamicKReach::query(vertex_t s, vertex_t t) const {
+    if (s == t && s < graph_.num_vertices()){
+        return true;
+    }
+    if (indexed(s) && indexed(t)){
+        return distance(s, t) <= k_;
+    }
+    else if (indexed(s) && !indexed(t)){
+        for (const auto &v : graph_.predecessors(t)){
+            if (distance(s, v) + 1 <= k_){
+                return true;
             }
         }
     }
-}
-
-void DynamicKReach::remove_update() {
-    processing.insert(*identified.begin());
-    identified.erase(identified.begin());
-    stack<Edge> stackEdges;
-    stackEdges.push(*processing.begin());
-    while(!stackEdges.empty()){
-        Vertex s = stackEdges.top().first, t = stackEdges.top().second;
-        auto st = weight.find(s, t);
-        stackEdges.pop();
-        Weight result = k + 1;
-        const auto &sout = index.out(s), &tin = index.in(t);
-        ExclusiveIntersection begin(s, sout.begin(), sout.end(), t, tin.begin(), tin.end()),
-                end(s, sout.end(), sout.end(), t, tin.end(), tin.end());
-        for (; begin != end; ++begin){
-            Vertex w = *begin;
-            auto sw = identified.find(Edge(s, w));
-            if (sw != identified.end()){
-                stackEdges.push(Edge(s, t));
-                stackEdges.push(Edge(s, w));
-                processing.insert(*sw);
-                identified.erase(sw);
-                goto next;
+    else if (!indexed(s) && indexed(t)){
+        for (const auto &v : graph_.successors(s)){
+            if (distance(v, t) + 1 <= k_){
+                return true;
             }
-            auto wt = identified.find(Edge(w, t));
-            if (wt != identified.end()){
-                stackEdges.push(Edge(s, t));
-                stackEdges.push(Edge(w, t));
-                processing.insert(*wt);
-                identified.erase(wt);
-                goto next;
-            }
-            if (processing.count(Edge(s, w)) || processing.count(Edge(w, t))){
-                continue;
-            }
-            if (weight(s, w) + weight(w, t) < result){
-                result = weight(s, w) + weight(w, t);
-            }
-        }
-        if (result <= k){
-            st->second = result;
-        }
-        else{
-            index.remove(s, t);
-            weight.undefine(st);
-        }
-        processing.erase(Edge(s, t));
-        next:;
-    }
-}
-
-void DynamicKReach::insert_edge(Vertex s, Vertex t) {
-    if (s == t){
-        return;
-    }
-    insert_vertex(s);
-    insert_vertex(t);
-    s = mapper(s);
-    t = mapper(t);
-    if (graph.out(s).contains(t)){
-        return;
-    }
-    if (!index.contains(s) && !index.contains(t)){
-        Vertex v = graph(s).degree() > graph(t).degree() ? s : t;
-        index[v];
-        index.insert(v, v);
-        weight(v, v) = 0;
-        for (const auto &w : graph.out(v)){
-            for (const auto &q : index.out(w)){
-                auto weight_wq = weight(w, q);
-                auto it = weight.find(v, q);
-                if (!weight.defined(it) && weight_wq + 1 <= k){
-                    index.insert(v, q);
-                    weight(v, q) = weight_wq + 1;
-                }
-                else if (weight.defined(it) && weight_wq + 1 < it->second){
-                    it->second = weight_wq + 1;
-                }
-            }
-        }
-        for (const auto &w : graph.in(v)){
-            for (const auto &p : index.in(w)){
-                auto weight_pw = weight(p, w);
-                auto it = weight.find(p, v);
-                if (!weight.defined(it) && weight_pw + 1 <= k){
-                    index.insert(p, v);
-                    weight(p, v) = weight_pw + 1;
-                }
-                else if (weight.defined(it) && weight_pw + 1 < it->second){
-                    it->second = weight_pw + 1;
-                }
-            }
-        }
-    }
-    graph.insert(s, t);
-    if (index.contains(s) && index.contains(t)){
-        insert_update(s, t, 1);
-    }
-    else if (index.contains(s)){
-        for (const auto &w : graph.out(t)){
-            insert_update(s, w, 2);
-        }
-    }
-    else{
-        for (const auto &w : graph.in(s)){
-            insert_update(w, t, 2);
-        }
-    }
-}
-
-void DynamicKReach::remove_edge(Vertex s, Vertex t) {
-    if (s == t || !mapper.present(s) || !mapper.present(t)){
-        return;
-    }
-    s = mapper(s);
-    t = mapper(t);
-    if (!graph.out(s).contains(t)){
-        return;
-    }
-    graph.remove(s, t);
-    if (index.contains(s) && index.contains(t)){
-        remove_identify(s, t, 1);
-    }
-    else if (index.contains(s)){
-        for (const auto &w : graph.out(t)){
-            remove_identify(s, w, 2);
         }
     }
     else {
-        for (const auto &w : graph.in(s)){
-            remove_identify(w, t, 2);
-        }
-    }
-    while (!identified.empty()){
-        remove_update();
-    }
-}
-
-void DynamicKReach::remove_vertex(Vertex v) {
-    if (!mapper.present(v)){
-        return;
-    }
-    Vertex v_old = v;
-    v = mapper(v);
-    mapper.remove(v_old);
-    for (const auto &p : graph.in(v)){
-        graph.out(p).remove(v);
-    }
-    for (const auto &q : graph.out(v)){
-        graph.in(q).remove(v);
-    }
-    if (index.contains(v)){
-        index.remove(v, v);
-        weight.undefine(weight.find(v, v));
-        remove_identify(v, v, 0);
-        for (const auto &p : index.in(v)){
-            index.out(p).remove(v);
-            weight.undefine(weight.find(p, v));
-        }
-        for (const auto &q : index.out(v)){
-            index.in(q).remove(v);
-            weight.undefine(weight.find(v, q));
-        }
-        index.remove(v);
-    }
-    else{
-        for (const auto &p : graph.in(v)){
-            for(const auto &q : graph.out(v)){
-                remove_identify(p, q, 2);
+        for (const auto &u : graph_.successors(s)){
+            for (const auto &v : graph_.predecessors(t)){
+                if (distance(u, v) + 2 <= k_){
+                    return true;
+                }
             }
         }
     }
-    graph(v).clear();
-    while(!identified.empty()){
-        remove_update();
-    }
+    return false;
 }
 
-DynamicKReach::DynamicKReach(const DynamicKReach &i) : KReach(i){
-
+bool DynamicKReach::indexed(vertex_t v) const {
+    return index_.find(v) != index_.end();
 }
 
-DynamicKReach &DynamicKReach::operator=(DynamicKReach i) {
-    KReach::operator=(i);
-    return *this;
+distance_t DynamicKReach::distance(vertex_t s, vertex_t t) const {
+    return index_.at(s).at(t);
 }
 
-DynamicKReach::DynamicKReach(const KReach &i) : KReach(i) {
-
+void DynamicKReach::set_degree() {
+    copy(graph_.degree().begin(), graph_.degree().end(), degree_.begin());
 }
 
-DynamicKReach &DynamicKReach::operator=(KReach i) {
-    KReach::operator=(i);
-    return *this;
-}
-
-void DynamicKReach::remove_vertex_edges(Vertex v) {
-    if (!mapper.present(v)){
-        return;
-    }
-    Vertex v_old = v;
-    v = mapper(v);
-    while (!graph.in(v).empty()){
-        Vertex u = *graph.in(v).begin();
-        graph.remove(u, v);
-        if (index.contains(u) && index.contains(v)){
-            remove_identify(u, v, 1);
+void DynamicKReach::cover(vertex_t v) {
+    degree_.at(v) = 0;
+    for (const auto &i : graph_.successors(v)) {
+        if (degree_.at(i) > 0) {
+            --degree_.at(i);
         }
-        else if (index.contains(u)){
-            for (const auto &w : graph.out(v)){
-                remove_identify(u, w, 2);
+    }
+    for (const auto &i : graph_.predecessors(v)) {
+        if (degree_.at(i) > 0) {
+            --degree_.at(i);
+        }
+    }
+}
+
+void DynamicKReach::construct_bfs(vertex_t s, std::vector<distance_t> &dist) {
+    back_ = 0;
+    front_ = 0;
+    dist.at(s) = 0;
+    queue_.at(back_++) = s;
+    while (back_ != front_) {
+        auto cur = queue_.at(front_++);
+        if (dist.at(cur) >= k_) {
+            continue;
+        }
+        for (const auto &nxt : graph_.successors(cur)) {
+            if (dist.at(nxt) != INF8) {
+                continue;
             }
+            dist.at(nxt) = dist.at(cur) + 1;
+            if (graph_.successors(nxt).size() > 0) {
+                queue_.at(back_++) = nxt;
+            }
+        }
+    }
+}
+
+void DynamicKReach::insert_edge(vertex_t s, vertex_t t) {
+    index_temp_.clear();
+    swap(index_, index_temp_);
+    set_degree();
+    for (vertex_t i = 0; i < graph_.num_vertices(); ++i){
+        quedeg_.emplace(degree_.at(i), i);
+    }
+    while (!quedeg_.empty()){
+        auto deg = quedeg_.top().first;
+        auto cur = quedeg_.top().second;
+        quedeg_.pop();
+        if (deg <= 0 || degree_.at(cur) <= 0) {
+            continue;
+        }
+        if (deg != degree_.at(cur)) {
+            quedeg_.emplace(degree_.at(cur), cur);
+            continue;
+        }
+        if (index_temp_.find(cur) != index_temp_.end()){
+            index_[cur] = move(index_temp_.at(cur));
+            update_insert(s, t, index_.at(cur));
         }
         else {
-            for (const auto &w : graph.in(u)){
-                remove_identify(w, v, 2);
-            }
+            index_[cur] = vector<distance_t>(graph_.num_vertices(), INF8);
+            construct_bfs(cur, index_.at(cur));
         }
-        while (!identified.empty()){
-            remove_update();
+        index_temp_.erase(cur);
+        cover(cur);
+    }
+}
+
+void DynamicKReach::update_insert(vertex_t s, vertex_t t, std::vector<distance_t> &dist) {
+    if (dist.at(s) >= k_ || dist.at(t) <= dist.at(s) + 1) {
+        return;
+    }
+    dist.at(t) = dist.at(s) + 1;
+    resume_bfs(t, dist);
+}
+
+void DynamicKReach::resume_bfs(vertex_t s, std::vector<distance_t> &dist) {
+    back_ = 0;
+    front_ = 0;
+    assert(dist.at(s) != INF8);
+    queue_.at(back_++) = s;
+    while (back_ != front_) {
+        auto cur = queue_.at(front_++);
+        if (dist.at(cur) >= k_) {
+            continue;
+        }
+        for (const auto &nxt : graph_.successors(cur)) {
+            if (dist.at(nxt) <= dist.at(cur) + 1) {
+                continue;
+            }
+            dist.at(nxt) = dist.at(cur) + 1;
+            if (graph_.successors(nxt).size() > 0) {
+                queue_.at(back_++) = nxt;
+            }
         }
     }
-    while (!graph.out(v).empty()){
-        Vertex u = *graph.out(v).begin();
-        graph.remove(v, u);
-        if (index.contains(v) && index.contains(u)){
-            remove_identify(v, u, 1);
+}
+
+void DynamicKReach::insert_vertex(vertex_t v, const std::vector<vertex_t> &out, const std::vector<vertex_t> &in) {
+    index_temp_.clear();
+    swap(index_, index_temp_);
+    set_degree();
+    for (vertex_t i = 0; i < graph_.num_vertices(); ++i){
+        quedeg_.emplace(degree_.at(i), i);
+    }
+    while (!quedeg_.empty()){
+        auto deg = quedeg_.top().first;
+        auto cur = quedeg_.top().second;
+        quedeg_.pop();
+        if (deg <= 0 || degree_.at(cur) <= 0) {
+            continue;
         }
-        else if (index.contains(v)){
-            for (const auto &w : graph.out(u)){
-                remove_identify(v, w, 2);
-            }
+        if (deg != degree_.at(cur)) {
+            quedeg_.emplace(degree_.at(cur), cur);
+            continue;
+        }
+        if (index_temp_.find(cur) != index_temp_.end()){
+            index_[cur] = move(index_temp_.at(cur));
+            update_insert(v, out, in, index_.at(cur));
         }
         else {
-            for (const auto &w : graph.in(v)){
-                remove_identify(w, u, 2);
+            index_[cur] = vector<distance_t>(graph_.num_vertices(), INF8);
+            construct_bfs(cur, index_.at(cur));
+        }
+        index_temp_.erase(cur);
+        cover(cur);
+    }
+}
+
+void DynamicKReach::update_insert(vertex_t v, const std::vector<vertex_t> &out, const std::vector<vertex_t> &in,
+                                  std::vector<distance_t> &dist) {
+    auto d = dist.at(v);
+    for (const auto &s : in){
+        if (dist.at(s) < k_ && dist.at(s) + 1 < dist.at(v)){
+            dist.at(v) = dist.at(s) + 1;
+        }
+    }
+
+    if (dist.at(v) >= k_){
+        return;
+    }
+
+    if (dist.at(v) < d){
+        resume_bfs(v, dist);
+    }
+    else {
+        for (const auto &t : out) {
+            if (dist.at(v) + 1 < dist.at(t)){
+                dist.at(t) = dist.at(v) + 1;
+                resume_bfs(t, dist);
             }
         }
-        while (!identified.empty()){
-            remove_update();
+    }
+}
+
+void DynamicKReach::remove_edge(vertex_t s, vertex_t t) {
+    index_temp_.clear();
+    swap(index_, index_temp_);
+    set_degree();
+    for (vertex_t i = 0; i < graph_.num_vertices(); ++i){
+        quedeg_.emplace(degree_.at(i), i);
+    }
+    while (!quedeg_.empty()){
+        auto deg = quedeg_.top().first;
+        auto cur = quedeg_.top().second;
+        quedeg_.pop();
+        if (deg <= 0 || degree_.at(cur) <= 0) {
+            continue;
+        }
+        if (deg != degree_.at(cur)) {
+            quedeg_.emplace(degree_.at(cur), cur);
+            continue;
+        }
+        if (index_temp_.find(cur) != index_temp_.end()){
+            index_[cur] = move(index_temp_.at(cur));
+            update_remove(s, t, index_.at(cur));
+        }
+        else {
+            index_[cur] = vector<distance_t>(graph_.num_vertices(), INF8);
+            construct_bfs(cur, index_.at(cur));
+        }
+        index_temp_.erase(cur);
+        cover(cur);
+    }
+}
+
+void DynamicKReach::update_remove(vertex_t s, vertex_t t, std::vector<distance_t> &dist) {
+    if (dist.at(s) >= k_ || dist.at(t) > k_ || dist.at(s) + 1 != dist.at(t)) {
+        return;
+    }
+    updated_.clear();
+    collect_changes(t, dist);
+    fix_changes(dist);
+}
+
+void DynamicKReach::collect_changes(vertex_t s, std::vector<distance_t> &dist) {
+    back_ = 0;
+    front_ = 0;
+    if (dist.at(s) > 0 && !has_parent(s, dist)) {
+        queue_.at(back_++) = s;
+        dist.at(s) = INF8;
+        updated_.push_back(s);
+    }
+    while (back_ != front_) {
+        auto cur = queue_.at(front_++);
+        for (const auto &nxt : graph_.successors(cur)) {
+            if (dist.at(nxt) != INF8 && dist.at(nxt) > 0 && !has_parent(nxt, dist)) {
+                queue_.at(back_++) = nxt;
+                dist.at(nxt) = INF8;
+                updated_.push_back(nxt);
+            }
         }
     }
-    if (index.contains(v)) {
-        index.remove(v);
-        weight.undefine(weight.find(v, v));
+}
+
+bool DynamicKReach::has_parent(vertex_t s, const std::vector<distance_t> &dist) {
+    for (const auto &prev : graph_.predecessors(s)) {
+        if (dist.at(prev) < dist.at(s)) {
+            return true;
+        }
     }
-    graph(v).clear();
-    mapper.remove(v_old);
+    return false;
+}
+
+void DynamicKReach::fix_changes(std::vector<distance_t> &dist) {
+    for (const auto &w : updated_) {
+        for (const auto &prv : graph_.predecessors(w)) {
+            if (dist.at(prv) + 1 < dist.at(w)) {
+                dist.at(w) = dist.at(prv) + 1;
+            }
+        }
+        quedist_.emplace(dist.at(w), w);
+    }
+    while (!quedist_.empty()) {
+        auto d = quedist_.top().first;
+        auto w = quedist_.top().second;
+        quedist_.pop();
+        if (d >= k_) {
+            continue;
+        }
+        for (const auto &nxt : graph_.successors(w)) {
+            if (dist.at(nxt) > d + 1) {
+                dist.at(nxt) = d + 1;
+                quedist_.emplace(dist.at(nxt), nxt);
+            }
+        }
+    }
+}
+
+void DynamicKReach::remove_vertex(vertex_t v, const std::vector<vertex_t> &out, const std::vector<vertex_t> &in) {
+    (void) in;
+    index_temp_.clear();
+    swap(index_, index_temp_);
+    set_degree();
+    for (vertex_t i = 0; i < graph_.num_vertices(); ++i){
+        quedeg_.emplace(degree_.at(i), i);
+    }
+    while (!quedeg_.empty()){
+        auto deg = quedeg_.top().first;
+        auto cur = quedeg_.top().second;
+        quedeg_.pop();
+        if (deg <= 0 || degree_.at(cur) <= 0) {
+            continue;
+        }
+        if (deg != degree_.at(cur)) {
+            quedeg_.emplace(degree_.at(cur), cur);
+            continue;
+        }
+        if (index_temp_.find(cur) != index_temp_.end()){
+            index_[cur] = move(index_temp_.at(cur));
+            update_remove(v, out, index_.at(cur));
+        }
+        else {
+            index_[cur] = vector<distance_t>(graph_.num_vertices(), INF8);
+            construct_bfs(cur, index_.at(cur));
+        }
+        index_temp_.erase(cur);
+        cover(cur);
+    }
+}
+
+void DynamicKReach::update_remove(vertex_t v, const std::vector<vertex_t> &out, std::vector<distance_t> &dist) {
+    if (dist.at(v) > k_) {
+        return;
+    }
+    dist.at(v) = INF8;
+    updated_.clear();
+    collect_changes(out, dist);
+    fix_changes(dist);
+}
+
+void DynamicKReach::collect_changes(const std::vector<vertex_t> &sv, std::vector<distance_t> &dist) {
+    back_ = 0;
+    front_ = 0;
+    for (const auto &s : sv) {
+        if (dist.at(s) > 0 && !has_parent(s, dist)) {
+            queue_.at(back_++) = s;
+            dist.at(s) = INF8;
+            updated_.push_back(s);
+        }
+    }
+    while (back_ != front_) {
+        auto cur = queue_.at(front_++);
+        for (const auto &nxt : graph_.successors(cur)) {
+            if (dist.at(nxt) != INF8 && dist.at(nxt) > 0 && !has_parent(nxt, dist)) {
+                queue_.at(back_++) = nxt;
+                dist.at(nxt) = INF8;
+                updated_.push_back(nxt);
+            }
+        }
+    }
 }
