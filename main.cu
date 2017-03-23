@@ -2,6 +2,10 @@
 #include <DynamicKReach.h>
 #include <ScalableKReach.h>
 #include <DynamicScalableKReach.h>
+#include <GPUKReach.h>
+#include <DynamicGPUKReach.h>
+#include <ScalableGPUKReach.h>
+#include <DynamicScalableGPUKReach.h>
 
 #include <iostream>
 #include <memory>
@@ -25,14 +29,29 @@ int main() {
     graph.from_kreach("data/sample.kreach");
     graph.compute_degree();
 
-    unique_ptr<AbstractKReach> indexes[4];
+    GPUGraph gpuGraph;
+    gpuGraph.from_kreach("data/sample.kreach");
+    gpuGraph.compute_degree();
+
+    unique_ptr<AbstractKReach> indexes[8];
     indexes[0].reset(new KReach(graph, 3));
     indexes[1].reset(new DynamicKReach(graph, 3));
     indexes[2].reset(new ScalableKReach(graph, 3, 1000, 10000));
     indexes[3].reset(new DynamicScalableKReach(graph, 3, 1000, 10000));
 
+    indexes[4].reset(new GPUKReach(gpuGraph, 3));
+    indexes[5].reset(new DynamicGPUKReach(gpuGraph, 3));
+    indexes[6].reset(new ScalableGPUKReach(gpuGraph, 3, 1000, 10000));
+    indexes[7].reset(new DynamicScalableGPUKReach(gpuGraph, 3, 1000, 10000));
+
     for (auto &i : indexes){
         i->construct();
+    }
+
+    for (const auto &i : indexes){
+        for (const auto &j : indexes){
+            equals(graph, *i, *j);
+        }
     }
 
     vector<pair<vertex_t, vertex_t>> edges;
@@ -51,6 +70,7 @@ int main() {
         cout << s << " " << t << endl;
 
         graph.remove_edge(s, t);
+        gpuGraph.remove_edge(s, t);
 
         for (auto &i : indexes){
             i->remove_edge(s, t);
@@ -62,6 +82,7 @@ int main() {
         }
 
         graph.insert_edge(s, t);
+        gpuGraph.insert_edge(s, t);
 
         for (auto &i : indexes){
             i->insert_edge(s, t);
@@ -82,6 +103,7 @@ int main() {
         auto out = move(graph.successors(s)), in = move(graph.predecessors(s));
 
         graph.remove_vertex(s);
+        gpuGraph.remove_vertex(s);
 
         for (auto &i : indexes){
             i->remove_vertex(s, out, in);
@@ -93,6 +115,7 @@ int main() {
         }
 
         graph.insert_vertex(s, out, in);
+        gpuGraph.insert_vertex(s, out, in);
 
         for (auto &i : indexes){
             i->insert_vertex(s, out, in);

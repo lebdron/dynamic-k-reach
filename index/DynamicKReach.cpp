@@ -307,7 +307,7 @@ bool DynamicKReach::has_parent(vertex_t s, const std::vector<distance_t> &dist) 
 void DynamicKReach::fix_changes(std::vector<distance_t> &dist) {
     for (const auto &w : updated_) {
         for (const auto &prv : graph_.predecessors(w)) {
-            if (dist.at(prv) + 1 < dist.at(w)) {
+            if (dist.at(prv) + 1 < dist.at(w) && dist.at(prv) + 1 <= k_) {
                 dist.at(w) = dist.at(prv) + 1;
             }
         }

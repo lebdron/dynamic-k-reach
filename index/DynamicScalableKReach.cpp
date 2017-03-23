@@ -386,7 +386,7 @@ void DynamicScalableKReach::DynamicPartialIndex::fix_changes(const std::vector<s
                                                              std::vector<distance_t> &dist) {
     for (const auto &w : updated_) {
         for (const auto &prv : reverse_graph.at(w)) {
-            if (dist.at(prv) + 1 < dist.at(w)) {
+            if (dist.at(prv) + 1 < dist.at(w) && dist.at(prv) + 1 <= k_) {
                 dist.at(w) = dist.at(prv) + 1;
             }
         }
